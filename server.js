@@ -4,7 +4,7 @@ const app = express()
 const port = 8001
 
 //회원가입
-app.post("/account", (req,res) => {
+app.post("/accounts", (req,res) => {
     const { id, pw, phone, name, email, birth } = req.body
 
     const result = {
@@ -17,11 +17,15 @@ app.post("/account", (req,res) => {
     result.success = true
     result.message = "회원가입 성공"
     result.data = {
-        "user_key" : user_key,
         "id" : id,
         "email" : email,
-        "name" : name
+        "name" : name,
+        "birth" : birth
     }
+
+    //중복 시
+    result.success = false
+    result.message = "회원가입 실패"
 
     res.send(result)
 })
@@ -55,7 +59,7 @@ app.post("/login", (req,res) => {
 
 //로그아웃
 app.post("/logout", (req,res) => {
-    const { user_key } = req.body
+    //세션 가져오기
 
     const result = {
         "success" : false, // 성공여부
@@ -68,7 +72,7 @@ app.post("/logout", (req,res) => {
 
     //실패시
     result.success = false
-    result.message = "로그인 실패"
+    result.message = "로그아웃 실패"
     
     res.send(result)
 })
@@ -122,8 +126,8 @@ app.post("/findId", (req,res) => {
 })
 
 //내 정보 보기 
-app.get("/account", (req,res) => {
-    const { user_key } = req.body
+app.get("/accounts", (req,res) => {
+    //세션 가져오기
 
     const result = {
         "success" : false, // 성공여부
@@ -149,7 +153,7 @@ app.get("/account", (req,res) => {
 })
 
 //내 정보 수정하기
-app.put("/account", (req,res) => {
+app.put("/accounts", (req,res) => {
     const { email, name, phone, pw  } = req.body
 
     const result = {
@@ -176,9 +180,8 @@ app.put("/account", (req,res) => {
 })
 
 //회원 탈퇴하기
-app.delete("/account", (req,res) => {
-    const { user_key } = req.body
-
+app.delete("/accounts", (req,res) => {
+    // 세션 가져오기
     const result = {
         "success" : false, // 성공여부
         "message" : "" // 메시지
@@ -196,8 +199,8 @@ app.delete("/account", (req,res) => {
 })
 
 //게시물 쓰기
-app.post("/posting", (req,res) => {
-    const { content, title, user_key } = req.body
+app.post("/postings", (req,res) => {
+    const { content, title } = req.body
 
     const result = {
         "success" : false, // 성공여부
@@ -223,7 +226,7 @@ app.post("/posting", (req,res) => {
 })
 
 //게시물 읽기
-app.get("/posting", (req,res) => {
+app.get("/postings", (req,res) => {
     const { posting_key } = req.body
 
     const result = {
@@ -252,7 +255,8 @@ app.get("/posting", (req,res) => {
 })
 
 //게시물 수정
-app.put("/posting", (req,res) => {
+app.put("/postings", (req,res) => {
+    // 세션 가져오기
     const { posting_key, content, title, user_key } = req.body
 
     const result = {
@@ -278,7 +282,7 @@ app.put("/posting", (req,res) => {
 })
 
 //게시물 삭제
-app.delete("/posting", (req,res) => {
+app.delete("/postings", (req,res) => {
     const { posting_key, user_key } = req.body
 
     const result = {
@@ -298,8 +302,8 @@ app.delete("/posting", (req,res) => {
 })
 
 //댓글 쓰기
-app.post("/comment", (req,res) => {
-    const { posting_key, user_key, content } = req.body
+app.post("/comments", (req,res) => {
+    const { posting_key, content } = req.body
 
     const result = {
         "success" : false, // 성공여부
@@ -325,7 +329,7 @@ app.post("/comment", (req,res) => {
 })
 
 //댓글 읽기
-app.get("/comment", (req,res) => {
+app.get("/comments", (req,res) => {
     const { comment_key } = req.body
 
     const result = {
@@ -353,7 +357,7 @@ app.get("/comment", (req,res) => {
 })
 
 //댓글 수정
-app.get("/comment", (req,res) => {
+app.get("/comments", (req,res) => {
     const { comment_key, user_key, content, title } = req.body
 
     const result = {
@@ -380,7 +384,7 @@ app.get("/comment", (req,res) => {
 })
 
 //댓글 삭제
-app.delete("/comment", (req,res) => {
+app.delete("/comments", (req,res) => {
     const { comment_key, user_key } = req.body
 
     const result = {
