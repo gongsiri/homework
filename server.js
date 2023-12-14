@@ -23,50 +23,56 @@ app.use(session({
 
 //로그인
 app.post("/login", (req,res) => {
-    const { id, pw } = req.body
+    try{
+        const { id, pw } = req.body
 
-    const idPattern = /^[a-zA-Z0-9]{4,20}$/
-    const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
+        const idPattern = /^[a-zA-Z0-9]{4,20}$/
+        const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
 
-    const result = {
-        "success" : false, // 성공여부
-        "message" : "", // 메시지
-        "data" : null // 사용자 정보
-    }
+        const result = {
+            "success" : false, // 성공여부
+            "message" : "", // 메시지
+            "data" : null // 사용자 정보
+        }
 
-    if(!idPattern.test(id)){
+        if(!idPattern.test(id)){
+            result.success = false
+            result.message = `아이디는 영문자와 숫자로만 이루어진 4~20자 입력한 아이디 : ${id}`
+            return res.status(400).send(result)
+        }
+        if(!pwPattern.test(pw)){
+            result.success = false
+            result.message = `비밀번호는 최소한 하나의 영문자, 하나의 숫자, 하나의 특수문자자로 이루어진 8~30자 입력한 비밀번호 : ${pw}`
+            return res.status(400).send(result)
+        }
+        if(pw !==pwValue){
+            result.success = false
+            result.message = "로그인 실패"
+            return res.status(400).send(result)
+        }
+        
+        result.success = true
+        result.message = "로그인 성공"
+        result.data = { // DB에서 가져온 값들을 넣어줌
+            "userKey" : keyValue, 
+            "id" : id,
+            "email" : emailValue,
+            "name" : nameValue
+        }
+        req.session.isLogin = true
+        req.session.id = id // 세션에 정보 저장
+        req.session.userKey = keyValue
+        req.session.pw = pw
+        req.session.phone = phoneValue
+        req.session.email = emailValue
+        req.session.name = nameValue
+
+        res.status(200).send(result)
+    } catch (error){
         result.success = false
-        result.message = `아이디는 영문자와 숫자로만 이루어진 4~20자 입력한 아이디 : ${id}`
-        return res.status(400).send(result)
+        result.message = "오류 발생"
+        res.status(500).send(result)
     }
-    if(!pwPattern.test(pw)){
-        result.success = false
-        result.message = `비밀번호는 최소한 하나의 영문자, 하나의 숫자, 하나의 특수문자자로 이루어진 8~30자 입력한 비밀번호 : ${pw}`
-        return res.status(400).send(result)
-    }
-    if(pw !==pwValue){
-        result.success = false
-        result.message = "로그인 실패"
-        return res.status(400).send(result)
-    }
-    
-    result.success = true
-    result.message = "로그인 성공"
-    result.data = { // DB에서 가져온 값들을 넣어줌
-        "userKey" : keyValue, 
-        "id" : id,
-        "email" : emailValue,
-        "name" : nameValue
-    }
-    req.session.isLogin = true
-    req.session.id = id // 세션에 정보 저장
-    req.session.userKey = keyValue
-    req.session.pw = pw
-    req.session.phone = phoneValue
-    req.session.email = emailValue
-    req.session.name = nameValue
-
-    res.status(200).send(result)
 })
 
 //회원가입
@@ -480,42 +486,51 @@ app.get("/postings", (req,res) => {
     }
 })
 
-//각 게시물 읽기
+//각 게시물&댓글 읽기
 app.get("/postings/:postingKey", (req,res) => {
     try{
-        const postingKey = req.params.postingKey
         const isLogin = req.session.isLogin
-        const isPosting = false // 게시물이 있는지
-
+        const postingKey = req.params.postingKey
+        const isPosting = false
+    
         const result = {
             "success" : false, // 성공여부
             "message" : "", // 메시지
-            "data" : null // 게시물 정보
+            "data" : null // 댓글 정보
         }
-
+    
         if(!isLogin){
             result.success = false
             result.message = "로그인 되어 있지 않음"
             return res.status(401).send(result)
         }
 
+        if(!postingKey || postingKey.trim()==""){
+            result.success = false
+            result.message = "받아온 게시물 키가 비어있음"
+            return res.status(400).send(result)
+        }
+    
         if(!isPosting){
             result.success = false
             result.message = "게시물이 존재하지 않음"
             return res.status(404).send(result)
         }
-
+        
         result.success = true
-        result.message = "게시물 읽기 성공"
+        result.message = "전체 게시물과 댓글 읽기 성공"
         result.data = {
+            "commentKey" : commentKey,
             "postingKey" : postingKey,
-            "id" : id,
-            "content" : content,
-            "title" : title,
-            "view_count" : view_count,
-            "date" : date
+            "postingUser" : postingUserId,
+            "postingContent" : postingContent,
+            "postingTitle" : postingTitle,
+            "postingView" : postingViewCount,
+            "postingDate" : postingDate,
+            "commentUser" : commentUserId,
+            "commentContent" : commentContent,
+            "commentDate" : commentDate,
         }
-
         res.status(200).send(result)
     } catch (error){
         result.success = false
@@ -543,6 +558,12 @@ app.put("/postings/:postingKey", (req,res) => {
             result.success = false
             result.message = "로그인 되어 있지 않음"
             return res.status(401).send(result)
+        }
+
+        if(!postingKey || postingKey.trim()==""){
+            result.success = false
+            result.message = "받아온 게시물 키가 비어있음"
+            return res.status(400).send(result)
         }
     
         if(!content.trim()){
@@ -603,6 +624,12 @@ app.delete("/postings/:postingKey", (req,res) => {
             result.success = false
             result.message = "로그인 되어 있지 않음"
             return res.status(401).send(result)
+        }
+
+        if(!postingKey || postingKey.trim()==""){
+            result.success = false
+            result.message = "받아온 게시물 키가 비어있음"
+            return res.status(400).send(result)
         }
 
         if(!isPosting){
@@ -669,48 +696,6 @@ app.post("/comments", (req,res) => {
     }
 })
 
-//댓글 읽기
-app.get("/comments/:postingKey", (req,res) => {
-    try{
-        const isLogin = req.session.isLogin
-        const postingKey = req.params.postingKey
-        const isPosting = false
-    
-        const result = {
-            "success" : false, // 성공여부
-            "message" : "", // 메시지
-            "data" : null // 댓글 정보
-        }
-    
-        if(!isPosting){
-            result.success = false
-            result.message = "게시물이 존재하지 않음"
-            return res.status(404).send(result)
-        }
-    
-        if(!isLogin){
-            result.success = false
-            result.message = "로그인 되어 있지 않음"
-            return res.status(401).send(result)
-        }
-    
-        result.success = true
-        result.message = "댓글 읽기 성공"
-        result.data = {
-            "commentKey" : commentKey,
-            "postingKey" : postingKey,
-            "id" : id,
-            "content" : content,
-            "date" : date
-        }
-        
-        res.status(200).send(result)
-    } catch (error){
-        result.success = false
-        result.message = "오류 발생"
-        res.status(500).send(result)
-    }
-})
 
 //댓글 수정
 app.get("/comments:/commentKey", (req,res) => {
@@ -733,7 +718,13 @@ app.get("/comments:/commentKey", (req,res) => {
             res.status(401).send(result)
             return
         }
-    
+
+        if(!commentKey || commentKey.trim()==""){
+            result.success = false
+            result.message = "받아온 댓글 키가 비어있음"
+            return res.status(400).send(result)
+        }
+
         if(!content){
             result.success = false
             result.message = "내용이 공백임"
@@ -770,7 +761,7 @@ app.get("/comments:/commentKey", (req,res) => {
     }
 })
 
-//댓글 삭제  // 키로 아무것도 넘어오지 않을 때도 추가
+//댓글 삭제 
 app.delete("/comments:/commentKey", (req,res) => {
     try{
         const commentKey = req.params.commentKey
@@ -789,13 +780,19 @@ app.delete("/comments:/commentKey", (req,res) => {
             result.message = "로그인 되어 있지 않음"
             return res.status(401).send(result)
         }
-    
+
+        if(!commentKey || commentKey.trim()==""){
+            result.success = false
+            result.message = "받아온 댓글 키가 비어있음"
+            return res.status(400).send(result)
+        }
+
         if(!isComment){
             result.success = false
             result.message = "댓글이 존재하지 않음"
             return res.status(404).send(result)
         }
-    
+
         if(userKey!=sessionKey){
             result.success = false
             result.message = "댓글 작성자만 삭제 가능함"
