@@ -1,11 +1,14 @@
-const maria = require("mysql")
-
-const conn = maria.createConnection({
-    host : '13.125.242.140',
-    port : 8001,
+const mariaOption = {
+    host : "localhost",
+    port : 3306,
     user : "gongsil",
     password : "1005",
     database : "week06"
-})
+}
 
-module.exports = conn
+module.exports = mariaOption
+
+// conn.connect((err)=>{
+//     console.log(err)
+// })
+

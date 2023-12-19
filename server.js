@@ -2,8 +2,6 @@ const express = require("express")
 const session = require("express-session") // 세션const app = express()
 const app = express()
 const port = 8001
-const maria = require("./database/connect/maria")
-maria.connect()
 
 app.use(session({
     secret : 'session', // 세션을 암호화하는 데 사용됨

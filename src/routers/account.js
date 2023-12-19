@@ -1,6 +1,8 @@
 const router = require("express").Router()
+const maria = require("mysql2/promise")
+const mariaOption = require("../../database/connect/maria")
 
-const checkCondition = (value, input, pattern) => {
+const checkCondition = (value, pattern, input) => { // 모듈화
     if (!pattern.test(value)) {
         const error = new Error(`${input}이(가) 입력 양식에 맞지 않음`)
         error.status = 400
@@ -29,25 +31,32 @@ router.post("/login", (req,res) => {
         checkCondition(trimId,idPattern,"아이디")
         checkCondition(pw,pwPattern,"비밀번호")
 
-        if(pw !==pwValue){
-            const error = new Error("로그인 실패")
-            error.status = 401
-            throw error
-        }
-        result.message = "로그인 성공"
-        result.data = { // DB에서 가져온 값들을 넣어줌
-            "userKey" : keyValue, 
-            "id" : trimId,
-            "email" : emailValue,
-            "name" : nameValue
-        }
-        req.session.isLogin = true
-        req.session.id = trimId // 세션에 정보 저장
-        req.session.userKey = keyValue
-        req.session.phone = phoneValue
-        req.session.email = emailValue
-        req.session.name = nameValue
-        res.status(200).send(result)
+        const sql = "SELECT * FROM user WHERE id = ? AND pw =?"
+        const params = [trimId, pw]
+
+        maria.query(sql, params, (err, rows, fields) => {
+            if(rows.length>0){
+                const user = rows[0]
+                result.message = "로그인 성공"
+                result.data = { // DB에서 가져온 값들을 넣어줌
+                    "userKey" : user.user_key, 
+                    "id" : user.id,
+                    "email" : user.email,
+                    "name" : user.name
+                }
+                // req.session.isLogin = true
+                // req.session.id = trimId // 세션에 정보 저장
+                // req.session.userKey = keyValue
+                // req.session.phone = phoneValue
+                // req.session.email = emailValue
+                // req.session.name = nameValue
+                res.status(200).send(result)
+            } else{
+                const error = new Error("로그인 실패")
+                error.status = 401
+                throw error
+            }
+        })
     } catch (error){
         result.message = error.message || "오류 발생"
         res.status(error.status || 500).send(result)
@@ -55,7 +64,7 @@ router.post("/login", (req,res) => {
 })
 
 //회원가입
-router.post("/", (req,res) => {
+router.post("/", async (req,res) => {
     const { id, pw, pw_same, phone, name, email, birth } = req.body
 
     const idPattern = /^[a-zA-Z0-9]{4,20}$/
@@ -77,7 +86,7 @@ router.post("/", (req,res) => {
             error.status = 401
             throw error
         }
-        checkCondition(trimId,idPattern,"아이디")
+        checkCondition(id,idPattern,"아이디")
         checkCondition(pw,pwPattern,"비밀번호")
         checkCondition(phone,phonePattern,"전화번호")
         checkCondition(email,emailPattern,"이메일")
@@ -99,6 +108,11 @@ router.post("/", (req,res) => {
             error.status = 400
             throw error
         }
+        const dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
+        const sql = 'INSERT INTO user (id,pw,phone,name,email,birth) VALUES (?,?,?,?,?,?)'
+        const params = [id, pw, phone, name, email, birth]
+        const queryResult = await dbClient.execute(sql,params) // 여기에 sql과 params은 []로 만들자
+        console.log(queryResult)
         result.message = "회원가입 성공"
         result.data = {
             "id" : id,
@@ -107,10 +121,27 @@ router.post("/", (req,res) => {
             "birth" : birth
         }
         res.status(200).send(result)
+        dbClient.end()
     } catch (error){
         result.message = error.message || "오류 발생"
         res.status(error.status || 500).send(result)
+        if(err)
     }
+    // maria.query(sql,params,(err, rows, fields) => {
+    //     if(err){
+    //         console.log(err)
+    //         res.status(500).send("오류")
+    //         return
+    //     }
+    //     result.message = "회원가입 성공"
+    //     result.data = {
+    //         "id" : id,
+    //         "email" : email,
+    //         "name" : name,
+    //         "birth" : birth
+    //     }
+    //     res.status(200).send(result)
+    // })
 })
 
 //로그아웃
