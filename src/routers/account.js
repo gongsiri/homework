@@ -1,17 +1,17 @@
 const router = require("express").Router()
-const maria = require("mysql2/promise")
+const maria = require("mysql2/promise") //promise라는 개념을 사용하는 async/await을 쓰자
 const mariaOption = require("../../database/connect/maria")
 
-const checkCondition = (value, pattern, input) => { // 모듈화
+const checkCondition = (value, pattern, input) => {
     if (!pattern.test(value)) {
         const error = new Error(`${input}이(가) 입력 양식에 맞지 않음`)
         error.status = 400
         throw error
-      }
+    }
 }
 
 //로그인
-router.post("/login", (req,res) => {
+router.post("/login", async (req,res,next) => {
     const { id, pw } = req.body
 
     const idPattern = /^[a-zA-Z0-9]{4,20}$/
@@ -21,6 +21,13 @@ router.post("/login", (req,res) => {
         "message" : "", // 메시지
         "data" : null // 사용자 정보
     }
+    let dbClient
+
+    let userKey
+    let userPhone
+    let userEmail
+    let userName
+    let userDate
     try{
         if(req.session.isLogin){ // success 필요 없음
             const error = new Error("이미 로그인 되어 있음")
@@ -31,40 +38,52 @@ router.post("/login", (req,res) => {
         checkCondition(trimId,idPattern,"아이디")
         checkCondition(pw,pwPattern,"비밀번호")
 
-        const sql = "SELECT * FROM user WHERE id = ? AND pw =?"
+        dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
+        const sql = 'SELECT * FROM user WHERE id =? AND pw= ?'
         const params = [trimId, pw]
+        const queryResult = await dbClient.execute(sql,params) // 여기에 sql과 params은 []로 만들자
+    
+        if(queryResult[0].length>0){
+            const user = queryResult[0][0]
+            userKey = user.user_key
+            userPhone = user.phone
+            userEmail = user.email
+            userName = user.name
+            userDate = user.date
 
-        maria.query(sql, params, (err, rows, fields) => {
-            if(rows.length>0){
-                const user = rows[0]
-                result.message = "로그인 성공"
-                result.data = { // DB에서 가져온 값들을 넣어줌
-                    "userKey" : user.user_key, 
-                    "id" : user.id,
-                    "email" : user.email,
-                    "name" : user.name
-                }
-                // req.session.isLogin = true
-                // req.session.id = trimId // 세션에 정보 저장
-                // req.session.userKey = keyValue
-                // req.session.phone = phoneValue
-                // req.session.email = emailValue
-                // req.session.name = nameValue
-                res.status(200).send(result)
-            } else{
-                const error = new Error("로그인 실패")
-                error.status = 401
-                throw error
+            result.message = "로그인 성공"
+            result.data = {
+                "id" : trimId,
+                "name": userName,
+                "userKey" : userKey,
+                "email" : userEmail,
+                "date" : userDate,
             }
-        })
+            req.session.isLogin = true
+            req.session.userId = trimId // 세션에 정보 저장
+            req.session.userKey = userKey
+            req.session.phone = userPhone
+            req.session.email =userEmail
+            req.session.name = userName
+            req.session.save()
+            res.status(200).send(result)
+        }
+        else{
+            const error = new Error("로그인 실패")
+            error.status = 401
+            throw error
+        }
     } catch (error){
-        result.message = error.message || "오류 발생"
-        res.status(error.status || 500).send(result)
+        next(error)
+    } finally {
+        if(dbClient){
+            dbClient.end()
+        }
     }
 })
 
 //회원가입
-router.post("/", async (req,res) => {
+router.post("/", async (req,res,next) => {
     const { id, pw, pw_same, phone, name, email, birth } = req.body
 
     const idPattern = /^[a-zA-Z0-9]{4,20}$/
@@ -80,7 +99,9 @@ router.post("/", async (req,res) => {
         "message" : "", // 메시지
         "data" : null // 사용자 정보
     }
+    let dbClient
     try{
+        console.log("로그인 상태",req.session.isLogin)
         if(req.session.isLogin){
             const error = new Error("이미 로그인 되어 있음")
             error.status = 401
@@ -98,17 +119,28 @@ router.post("/", async (req,res) => {
             error.status = 400
             throw error
         }
-        if(idDuplication){
+
+        dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
+
+        const idSql = "SELECT id FROM user WHERE id = ?"
+        const idParams = [id]
+        const idQueryResult = await dbClient.execute(idSql,idParams)
+        console.log("아이디중복",idQueryResult)
+        if(idQueryResult[0].length>0){
             const error = new Error("아이디가 중복됨")
             error.status = 400
             throw error
         }
-        if(emailDuplication){
+
+        const emailSql = "SELECT * FROM user WHERE email = ?"
+        const emailParams = [email]
+        const emailQueryResult = await dbClient.execute(emailSql,emailParams)
+        if(emailQueryResult[0].length>0){
             const error = new Error("이메일이 중복됨")
             error.status = 400
             throw error
         }
-        const dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
+
         const sql = 'INSERT INTO user (id,pw,phone,name,email,birth) VALUES (?,?,?,?,?,?)'
         const params = [id, pw, phone, name, email, birth]
         const queryResult = await dbClient.execute(sql,params) // 여기에 sql과 params은 []로 만들자
@@ -123,29 +155,16 @@ router.post("/", async (req,res) => {
         res.status(200).send(result)
         dbClient.end()
     } catch (error){
-        result.message = error.message || "오류 발생"
-        res.status(error.status || 500).send(result)
-        if(err)
+        next(error)
+    } finally {
+        if(dbClient){
+            dbClient.end()
+        }
     }
-    // maria.query(sql,params,(err, rows, fields) => {
-    //     if(err){
-    //         console.log(err)
-    //         res.status(500).send("오류")
-    //         return
-    //     }
-    //     result.message = "회원가입 성공"
-    //     result.data = {
-    //         "id" : id,
-    //         "email" : email,
-    //         "name" : name,
-    //         "birth" : birth
-    //     }
-    //     res.status(200).send(result)
-    // })
 })
 
 //로그아웃
-router.post("/logout", (req,res) => {
+router.post("/logout", (req,res,next) => {
     const result = {
         "message" : "" // 메시지
     }
@@ -159,13 +178,12 @@ router.post("/logout", (req,res) => {
         req.session.destroy() // 세션 삭제
         res.status(200).send(result)
     } catch (error){
-        result.message = error.message || "오류 발생"
-        res.status(error.status || 500).send(result)
+        next(error)
     }
 })
 
 //id 찾기
-router.get("/findid", (req,res) => {
+router.get("/findid", async (req,res,next) => {
     const { name, email } = req.body
 
     const emailPattern = /^[0-9a-zA-Z._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
@@ -176,29 +194,41 @@ router.get("/findid", (req,res) => {
         "message" : "", // 메시지
         "data" : null // 사용자 정보
     }
+    let dbClient
+
     try{
         checkCondition(email,emailPattern,"이메일")
         const trimName = name.trim()
         checkCondition(trimName,namePattern,"이름")
 
-        if(!isUser){
+        dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
+
+        const sql = "SELECT id FROM user WHERE name = ? AND email =?"
+        const params = [trimName, email]
+        const queryResult = await dbClient.execute(sql,params)
+
+        if(queryResult[0].length>0){
+            result.message = "id 찾기 성공"
+            result.data = {
+                "id" : queryResult[0][0]
+            }
+            res.status(200).send(result)
+        } else {
             const error = new Error("해당하는 계정이 없음")
             error.status = 404
             throw error
         }
-        result.message = "id 찾기 성공"
-        result.data = {
-            "id" : id
-        }
-        res.status(200).send(result)
     } catch (error){
-        result.message = error.message || "오류 발생"
-        res.status(error.status || 500).send(result)
+        next(error)
+    } finally{
+        if(dbClient){
+            dbClient.end()
+        }
     }
 })
 
 //pw 찾기
-router.get("/findpw", (req,res) => {
+router.get("/findpw", async (req,res,next) => {
     const { id, email } = req.body
 
     const idPattern = /^[a-zA-Z0-9]{4,20}$/
@@ -209,33 +239,43 @@ router.get("/findpw", (req,res) => {
         "message" : "", // 메시지
         "data" : null // 사용자 정보
     }
+    let dbClient
     try{
         checkCondition(email,emailPattern,"이메일")
         const trimId = id.trim()
-        checkCondition(trimId,idPattern,"이메일")
+        checkCondition(trimId,idPattern,"아이디")
 
-        if(!isUser){
+        dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
+
+        const sql = "SELECT pw FROM user WHERE id = ? AND email =?"
+        const params = [trimId, email]
+        const queryResult = await dbClient.execute(sql,params)
+
+        if(queryResult[0].length>0){
+            result.message = "pw 찾기 성공"
+            result.data = {
+                "pw" : queryResult[0][0]
+            }
+            res.status(200).send(result)
+        } else {
             const error = new Error("해당하는 계정이 없음")
             error.status = 404
             throw error
         }
-        result.message = "pw 찾기 성공"
-        result.data = {
-            "pw" : pw
-        }
-        res.status(200).send(result)
     } catch (error){
-        result.message = error.message || "오류 발생"
-        res.status(error.status || 500).send(result)
+        next(error)
+    } finally {
+        if(dbClient){
+            dbClient.end()
+        }
     }
 })
 
 //내 정보 보기 
-router.get("/", (req,res) => {
+router.get("/", (req,res,next) => {
     const isLogin = req.session.isLogin
-    const id = req.session.id
+    const id = req.session.userId
     const userKey = req.session.userKey
-    const pw = req.session.pw
     const phone = req.session.phone
     const email =req.session.email
     const name = req.session.name
@@ -253,20 +293,21 @@ router.get("/", (req,res) => {
         }
         result.message = "내 정보 보기 성공"
         result.data = {
-            "userKey" : req.session.userKey,
-            "id" : req.session.id,
-            "email" : req.session.email,
-            "name" : req.session.name,
+            "userKey" : userKey,
+            "id" : id,
+            "email" : email,
+            "name" : name,
+            "phone" : phone,
+            "birth" : birth
         }
         res.status(200).send(result)
     } catch (error){
-        result.message = error.message || "오류 발생"
-        res.status(error.status || 500).send(result)
+        next(error)
     }
 })
 
 //내 정보 수정하기
-router.put("/", (req,res) => {
+router.put("/", (req,res,next) => {
     const { email, name, phone, pw, birth } = req.body
     const isLogin = req.session.isLogin
     const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
@@ -300,13 +341,12 @@ router.put("/", (req,res) => {
         }
         res.status(200).send(result)
     } catch (error){
-        result.message = error.message || "오류 발생"
-        res.status(error.status || 500).send(result)
+        next(error)
     }
 })
 
 //회원 탈퇴하기
-router.delete("/", (req,res) => {
+router.delete("/", (req,res,next) => {
     const isLogin = req.session.isLogin
 
     const result = {
@@ -322,8 +362,7 @@ router.delete("/", (req,res) => {
         req.session.destroy() //로그아웃
         res.status(200).send(result)
     } catch (error){
-        result.message = error.message || "오류 발생"
-        res.status(error.status || 500).send(result)
+        next(error)
     }
 })
 

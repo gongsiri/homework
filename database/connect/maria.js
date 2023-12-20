@@ -8,7 +8,4 @@ const mariaOption = {
 
 module.exports = mariaOption
 
-// conn.connect((err)=>{
-//     console.log(err)
-// })
 
