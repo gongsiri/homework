@@ -1,6 +1,12 @@
 const router = require("express").Router()
-const maria = require("mysql2/promise") //promise라는 개념을 사용하는 async/await을 쓰자
-const mariaOption = require("../../database/connect/maria")
+const connectMysql = require("../../database/connect/maria")
+
+const idPattern = /^[a-zA-Z0-9]{4,20}$/
+const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
+const phonePattern = /^01[0179][0-9]{7,8}$/
+const emailPattern = /^[0-9a-zA-Z._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+const birthPattern = /^(19|20)[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[1-2][0-9]|3[0-1])$/
+const namePattern = /^[가-힣]{2,5}$/
 
 const checkCondition = (value, pattern, input) => {
     if (!pattern.test(value)) {
@@ -13,16 +19,11 @@ const checkCondition = (value, pattern, input) => {
 //로그인
 router.post("/login", async (req,res,next) => {
     const { id, pw } = req.body
-
-    const idPattern = /^[a-zA-Z0-9]{4,20}$/
-    const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
-
     const result = {
         "message" : "", // 메시지
         "data" : null // 사용자 정보
     }
-    let dbClient
-
+    let connect
     let userKey
     let userPhone
     let userEmail
@@ -38,10 +39,10 @@ router.post("/login", async (req,res,next) => {
         checkCondition(trimId,idPattern,"아이디")
         checkCondition(pw,pwPattern,"비밀번호")
 
-        dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
+        connect = await connectMysql()
         const sql = 'SELECT * FROM user WHERE id =? AND pw= ?'
         const params = [trimId, pw]
-        const queryResult = await dbClient.execute(sql,params) // 여기에 sql과 params은 []로 만들자
+        const queryResult = await connect.execute(sql,params) // 여기에 sql과 params은 []로 만들자
     
         if(queryResult[0].length>0){
             const user = queryResult[0][0]
@@ -76,8 +77,8 @@ router.post("/login", async (req,res,next) => {
     } catch (error){
         next(error)
     } finally {
-        if(dbClient){
-            dbClient.end()
+        if(connect){
+            connect.end()
         }
     }
 })
@@ -86,20 +87,11 @@ router.post("/login", async (req,res,next) => {
 router.post("/", async (req,res,next) => {
     const { id, pw, pw_same, phone, name, email, birth } = req.body
 
-    const idPattern = /^[a-zA-Z0-9]{4,20}$/
-    const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
-    const phonePattern = /^01[0179][0-9]{7,8}$/
-    const emailPattern = /^[0-9a-zA-Z._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-    const birthPattern = /^(19|20)[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[1-2][0-9]|3[0-1])$/
-    const namePattern = /^[가-힣]{2,5}$/
-    const idDuplication = false // 아이디 중복 아닐 시 false, 중복일 시 true
-    const emailDuplication = false // 이메일 중복 아닐 시 false, 중복일 시 true
-
     const result = {
         "message" : "", // 메시지
         "data" : null // 사용자 정보
     }
-    let dbClient
+    let connect
     try{
         console.log("로그인 상태",req.session.isLogin)
         if(req.session.isLogin){
@@ -120,8 +112,7 @@ router.post("/", async (req,res,next) => {
             throw error
         }
 
-        dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
-
+        connect = await connectMysql()
         const idSql = "SELECT id FROM user WHERE id = ?"
         const idParams = [id]
         const idQueryResult = await dbClient.execute(idSql,idParams)
@@ -153,12 +144,11 @@ router.post("/", async (req,res,next) => {
             "birth" : birth
         }
         res.status(200).send(result)
-        dbClient.end()
     } catch (error){
         next(error)
     } finally {
-        if(dbClient){
-            dbClient.end()
+        if(connect){
+            connect.end()
         }
     }
 })
@@ -186,23 +176,18 @@ router.post("/logout", (req,res,next) => {
 router.get("/findid", async (req,res,next) => {
     const { name, email } = req.body
 
-    const emailPattern = /^[0-9a-zA-Z._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-    const namePattern = /^[가-힣]{2,5}$/
-    const isUser = false // 해당하는 계정이 있는지
-
     const result = {
         "message" : "", // 메시지
         "data" : null // 사용자 정보
     }
-    let dbClient
+    let connect
 
     try{
         checkCondition(email,emailPattern,"이메일")
         const trimName = name.trim()
         checkCondition(trimName,namePattern,"이름")
 
-        dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
-
+        connect = await connectMysql()
         const sql = "SELECT id FROM user WHERE name = ? AND email =?"
         const params = [trimName, email]
         const queryResult = await dbClient.execute(sql,params)
@@ -221,8 +206,8 @@ router.get("/findid", async (req,res,next) => {
     } catch (error){
         next(error)
     } finally{
-        if(dbClient){
-            dbClient.end()
+        if(connect){
+            connect.end()
         }
     }
 })
@@ -231,22 +216,17 @@ router.get("/findid", async (req,res,next) => {
 router.get("/findpw", async (req,res,next) => {
     const { id, email } = req.body
 
-    const idPattern = /^[a-zA-Z0-9]{4,20}$/
-    const emailPattern = /^[0-9a-zA-Z._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/ 
-    const isUser = false // 해당하는 계정이 있는지
-
     const result = {
         "message" : "", // 메시지
         "data" : null // 사용자 정보
     }
-    let dbClient
+    let connect
     try{
         checkCondition(email,emailPattern,"이메일")
         const trimId = id.trim()
         checkCondition(trimId,idPattern,"아이디")
 
-        dbClient = await maria.createConnection(mariaOption) // select문으로 감싸자, end로 끊어주자
-
+        connect = await connectMysql()
         const sql = "SELECT pw FROM user WHERE id = ? AND email =?"
         const params = [trimId, email]
         const queryResult = await dbClient.execute(sql,params)
@@ -265,8 +245,8 @@ router.get("/findpw", async (req,res,next) => {
     } catch (error){
         next(error)
     } finally {
-        if(dbClient){
-            dbClient.end()
+        if(connect){
+            connect.end()
         }
     }
 })
@@ -307,48 +287,49 @@ router.get("/", (req,res,next) => {
 })
 
 //내 정보 수정하기
-router.put("/", (req,res,next) => {
-    const { email, name, phone, pw, birth } = req.body
+router.put("/", async (req,res,next) => {
+    const { name, phone, pw, birth } = req.body
     const isLogin = req.session.isLogin
-    const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
-    const phonePattern = /^01[0179][0-9]{7,8}$/
-    const emailPattern = /^[0-9a-zA-Z._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-    const birthPattern = /^(19|20)[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[1-2][0-9]|3[0-1])$/
-    const namePattern = /^[가-힣]{2,5}$/
-
     const result = {
         "message" : "", // 메시지
         "data" : null // 사용자 정보
     }
+    let connect
     try{
         if(!isLogin){
             const error = new Error("로그인 되어 있지 않음")
             error.status = 401
             throw error
         }
-        checkCondition(pw,pwPattern,"비밀번호")
-        checkCondition(phone,phonePattern,"전화번호")
-        checkCondition(email,emailPattern,"이메일")
-        checkCondition(birth,birthPattern,"생년월일")
-        checkCondition(name,namePattern,"이름")
+        connect = await connectMysql()
+        const sql = "UPDATE user SET pw=?, name=?, phone=?, birth=? WHERE user_key=?"
+        const params = [pw, name, phone, birth,req.session.userKey]
+        await connect.execute(sql,params)
 
         result.message = "내 정보 수정 성공"
         result.data = { // 새로 입력한 정보를 보내줌
-            "userKey" : userKey, 
-            "id" : id,
-            "email" : email,
-            "name" : name
+            "userKey" : req.session.userKey, 
+            "id" : req.session.userId,
+            "email" : req.session.email,
+            "name" : req.session.name,
+            "birth": req.session.birth
         }
+        req.session.phone = phone
+        req.session.birth =birth
+        req.session.name = name
         res.status(200).send(result)
     } catch (error){
         next(error)
+    } finally {
+        if(connect){
+            connect.end()
+        }
     }
 })
 
 //회원 탈퇴하기
 router.delete("/", (req,res,next) => {
     const isLogin = req.session.isLogin
-
     const result = {
         "message" : "" // 메시지
     }

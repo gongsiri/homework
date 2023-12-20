@@ -1,3 +1,4 @@
+const mysql = require("mysql2/promise")
 const mariaOption = {
     host : "localhost",
     port : 3306,
@@ -5,7 +6,11 @@ const mariaOption = {
     password : "1005",
     database : "week06"
 }
-
-module.exports = mariaOption
+const connectMysql = async() => {
+    const connect = await mysql.createConnection(mariaOption)
+    connect.connect()
+    return connect
+}
+module.exports = connectMysql
 
 
