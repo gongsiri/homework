@@ -8,7 +8,6 @@ const mariaOption = {
 }
 const connectMysql = async() => {
     const connect = await mysql.createConnection(mariaOption)
-    connect.connect()
     return connect
 }
 module.exports = connectMysql
