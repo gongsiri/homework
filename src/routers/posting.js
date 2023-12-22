@@ -1,13 +1,13 @@
 const router = require("express").Router()
 const connectMysql = require("../../database/connect/maria")
-const { noLogin } = require("../modules/error")
+const { checkLogout } = require("../modules/error")
 
 //게시물 쓰기
-router.post("/", noLogin, async (req, res, next) => {
+router.post("/", checkLogout, async (req, res, next) => {
     const { content, title } = req.body
     const result = {
-        "message": "", // 메시지
-        "data": null // 게시물 정보
+        "message": "",
+        "data": null
     }
     let connect
     try {
@@ -46,13 +46,13 @@ router.post("/", noLogin, async (req, res, next) => {
 //전체 게시물 읽기
 router.get("/", async (req, res, next) => {
     const result = {
-        "message": "", // 메시지
-        "data": null // 게시물 정보
+        "message": "",
+        "data": null
     }
     let connect
     try {
         connect = await connectMysql()
-        const sql = "SELECT posting.*, user.id FROM posting JOIN user ON posting.user_key = user.user_key"
+        const sql = "SELECT posting.*, user.id AS postingUser FROM posting JOIN user ON posting.user_key = user.user_key ORDER BY posting.date DESC"
         const queryResult = await connect.execute(sql)
         const queryData = queryResult[0]
 
@@ -69,11 +69,11 @@ router.get("/", async (req, res, next) => {
 })
 
 //각 게시물 읽기
-router.get("/:idx", noLogin, async (req, res, next) => { // 그냥 idx만 적어도 됨(postingKey말고) 언더바도 괜찮
+router.get("/:idx", checkLogout, async (req, res, next) => {
     const postingKey = req.params.idx
     const result = {
-        "message": "", // 메시지
-        "data": null // 댓글 정보
+        "message": "",
+        "data": null
     }
     let connect
     try {
@@ -108,15 +108,15 @@ router.get("/:idx", noLogin, async (req, res, next) => { // 그냥 idx만 적어
 })
 
 //게시물 수정
-router.put("/:idx", noLogin, async (req, res, next) => {
+router.put("/:idx", checkLogout, async (req, res, next) => {
     const { content, title } = req.body
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
-    let connect
     const result = {
-        "message": "", // 메시지
-        "data": null // 게시물 정보
+        "message": "",
+        "data": null
     }
+    let connect
     try {
         if (!postingKey || postingKey.trim() == "" || postingKey == undefined) {
             const error = new Error("받아온 게시물 키가 비어있음")
@@ -125,13 +125,13 @@ router.put("/:idx", noLogin, async (req, res, next) => {
         }
 
         connect = await connectMysql()
-        const sql = "SELECT * FROM posting WHERE posting_key =?"
-        const params = [postingKey]
-        const queryResult = await connect.execute(sql, params)
-        const queryData = queryResult[0]
+        const selectSql = "SELECT * FROM posting WHERE posting_key =?"
+        const selectParams = [postingKey]
+        const selectQueryResult = await connect.execute(selectSql, selectParams)
+        const selectQueryData = selectQueryResult[0]
 
-        if (queryData.length > 0) {
-            const userKey = queryData[0].user_key
+        if (selectQueryData.length > 0) {
+            const userKey = selectQueryData[0].user_key
             if (userKey != sessionKey) {
                 const error = new Error("게시글 작성자만 수정 가능함")
                 error.status = 403
@@ -173,13 +173,13 @@ router.put("/:idx", noLogin, async (req, res, next) => {
 })
 
 //게시물 삭제
-router.delete("/:idx", noLogin, async (req, res, next) => {
+router.delete("/:idx", checkLogout, async (req, res, next) => {
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
-    let connect
     const result = {
-        "message": "" // 메시지
+        "message": ""
     }
+    let connect
     try {
         if (!postingKey || postingKey.trim() == "" || postingKey == undefined) {
             const error = new Error("받아온 게시물 키가 비어있음")
@@ -188,12 +188,13 @@ router.delete("/:idx", noLogin, async (req, res, next) => {
         }
 
         connect = await connectMysql()
-        const sql = "SELECT * FROM posting WHERE posting_key =?"
-        const params = [postingKey]
-        const queryResult = await connect.execute(sql, params)
+        const selectSql = "SELECT * FROM posting WHERE posting_key =?"
+        const selectParams = [postingKey]
+        const selectQueryResult = await connect.execute(selectSql, selectParams)
+        const selectQueryData = selectQueryResult[0]
 
-        if (queryResult[0].length > 0) {
-            const userKey = queryResult[0][0].user_key
+        if (selectQueryData.length > 0) {
+            const userKey = selectQueryData[0].user_key
             if (userKey != sessionKey) {
                 const error = new Error("게시글 작성자만 삭제 가능함")
                 error.status = 403

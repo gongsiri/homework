@@ -1,7 +1,8 @@
 const router = require("express").Router()
 const connectMysql = require("../../database/connect/maria")
-const { checkCondition, checkLogin, noLogin, checkPwMatch } = require("../modules/error")
+const { checkCondition, checkLogin, checkLogout, checkPwMatch } = require("../modules/error")
 
+//정규식
 const idPattern = /^[a-zA-Z0-9]{4,20}$/
 const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
 const phonePattern = /^01[0179][0-9]{7,8}$/
@@ -13,23 +14,22 @@ const namePattern = /^[가-힣]{2,5}$/
 router.post("/login", checkLogin, async (req, res, next) => {
     const { id, pw } = req.body
     const result = {
-        "message": "", // 메시지
-        "data": null // 사용자 정보
+        "message": ""
     }
     let connect
     try {
         const trimId = id.trim() // 아이디 앞뒤 공백 제거
-        checkCondition(trimId, idPattern, "아이디")
+        checkCondition(trimId, idPattern, "아이디") // 유효성 검사
         checkCondition(pw, pwPattern, "비밀번호")
 
         connect = await connectMysql()
         const sql = 'SELECT * FROM user WHERE id =? AND pw= ?'
         const params = [trimId, pw]
-        const queryResult = await connect.execute(sql, params) // 여기에 sql과 params은 []로 만들자
+        const queryResult = await connect.execute(sql, params)
         const queryData = queryResult[0]
+
         if (queryData.length > 0) {
             result.message = "로그인 성공"
-            result.data = queryData[0]
 
             req.session.isLogin = true
             req.session.userId = trimId // 세션에 정보 저장
@@ -49,7 +49,7 @@ router.post("/login", checkLogin, async (req, res, next) => {
         next(error)
     } finally {
         if (connect) {
-            connect.end()
+            connect.end() // 연결을 끊어줌
         }
     }
 })
@@ -57,10 +57,9 @@ router.post("/login", checkLogin, async (req, res, next) => {
 //회원가입
 router.post("/", checkLogin, async (req, res, next) => {
     const { id, pw, pw_same, phone, name, email, birth } = req.body
-
     const result = {
-        "message": "", // 메시지
-        "data": null // 사용자 정보
+        "message": "",
+        "data": null
     }
     let connect
     try {
@@ -77,6 +76,7 @@ router.post("/", checkLogin, async (req, res, next) => {
         const idParams = [id]
         const idQueryResult = await connect.execute(idSql, idParams)
         const idQueryData = idQueryResult[0]
+
         if (idQueryData.length > 0) {
             const error = new Error("아이디가 중복됨")
             error.status = 400
@@ -87,15 +87,16 @@ router.post("/", checkLogin, async (req, res, next) => {
         const emailParams = [email]
         const emailQueryResult = await connect.execute(emailSql, emailParams)
         const emailQueryData = emailQueryResult[0]
+
         if (emailQueryData.length > 0) {
             const error = new Error("이메일이 중복됨")
             error.status = 400
             throw error
         }
 
-        const sql = 'INSERT INTO user (id,pw,phone,name,email,birth) VALUES (?,?,?,?,?,?)'
-        const params = [id, pw, phone, name, email, birth]
-        await connect.execute(sql, params) // 여기에 sql과 params은 []로 만들자
+        const insertSql = 'INSERT INTO user (id,pw,phone,name,email,birth) VALUES (?,?,?,?,?,?)'
+        const insertParams = [id, pw, phone, name, email, birth]
+        await connect.execute(insertSql, insertParams)
         result.message = "회원가입 성공"
         result.data = {
             "id": id,
@@ -114,9 +115,9 @@ router.post("/", checkLogin, async (req, res, next) => {
 })
 
 //로그아웃
-router.post("/logout", noLogin, (req, res, next) => {
+router.post("/logout", checkLogout, (req, res, next) => {
     const result = {
-        "message": "" // 메시지
+        "message": ""
     }
     try {
         result.message = "로그아웃 성공"
@@ -130,13 +131,11 @@ router.post("/logout", noLogin, (req, res, next) => {
 //id 찾기
 router.get("/findid", checkLogin, async (req, res, next) => {
     const { name, email } = req.body
-
     const result = {
-        "message": "", // 메시지
-        "data": null // 사용자 정보
+        "message": "",
+        "data": null
     }
     let connect
-
     try {
         checkCondition(email, emailPattern, "이메일")
         const trimName = name.trim()
@@ -169,10 +168,9 @@ router.get("/findid", checkLogin, async (req, res, next) => {
 //pw 찾기
 router.get("/findpw", checkLogin, async (req, res, next) => {
     const { id, email } = req.body
-
     const result = {
-        "message": "", // 메시지
-        "data": null // 사용자 정보
+        "message": "",
+        "data": null
     }
     let connect
     try {
@@ -205,14 +203,13 @@ router.get("/findpw", checkLogin, async (req, res, next) => {
 })
 
 //내 정보 보기 
-router.get("/", noLogin, (req, res, next) => {
+router.get("/", checkLogout, (req, res, next) => {
     const id = req.session.userId
     const userKey = req.session.userKey
     const phone = req.session.phone
     const email = req.session.email
     const name = req.session.name
     const birth = req.session.birth
-
     const result = {
         "message": "", // 메시지
         "data": null // 사용자 정보
@@ -234,11 +231,11 @@ router.get("/", noLogin, (req, res, next) => {
 })
 
 //내 정보 수정하기
-router.put("/", noLogin, async (req, res, next) => {
+router.put("/", checkLogout, async (req, res, next) => {
     const { name, phone, pw, birth } = req.body
     const result = {
-        "message": "", // 메시지
-        "data": null // 사용자 정보
+        "message": "",
+        "data": null
     }
     let connect
     try {
@@ -274,9 +271,9 @@ router.put("/", noLogin, async (req, res, next) => {
 })
 
 //회원 탈퇴하기
-router.delete("/", noLogin, async (req, res, next) => {
+router.delete("/", checkLogout, async (req, res, next) => {
     const result = {
-        "message": "" // 메시지
+        "message": ""
     }
     const userKey = req.session.userKey
     let connect
