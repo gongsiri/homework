@@ -1,14 +1,9 @@
 const router = require("express").Router()
-const connectMysql = require("../../database/connect/maria")
-const { checkCondition, checkLogin, checkLogout, checkPwMatch } = require("../modules/error")
-
-//정규식
-const idPattern = /^[a-zA-Z0-9]{4,20}$/
-const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
-const phonePattern = /^01[0179][0-9]{7,8}$/
-const emailPattern = /^[0-9a-zA-Z._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-const birthPattern = /^(19|20)[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[1-2][0-9]|3[0-1])$/
-const namePattern = /^[가-힣]{2,5}$/
+const queryModule = require("../../database/connect/postgres")
+const checkCondition = require("../modules/checkCondition")
+const checkSame = require("../modules/checkSame")
+const checkLogin = require("../middleware/checkLogin.js")
+const checkLogout = require("../middleware/checkLogout.js")
 
 //로그인
 router.post("/login", checkLogin, async (req, res, next) => {
@@ -16,17 +11,13 @@ router.post("/login", checkLogin, async (req, res, next) => {
     const result = {
         "message": ""
     }
-    let connect
     try {
         const trimId = id.trim() // 아이디 앞뒤 공백 제거
-        checkCondition(trimId, idPattern, "아이디") // 유효성 검사
-        checkCondition(pw, pwPattern, "비밀번호")
+        checkCondition(trimId, "아이디") // 유효성 검사
+        checkCondition(pw, "비밀번호")
 
-        connect = await connectMysql()
-        const sql = 'SELECT * FROM user WHERE id =? AND pw= ?'
-        const params = [trimId, pw]
-        const queryResult = await connect.execute(sql, params)
-        const queryData = queryResult[0]
+        const sql = 'SELECT * FROM account WHERE id =$1 AND pw= $2'
+        const queryData = await queryModule(sql, [trimId, pw])
 
         if (queryData.length > 0) {
             result.message = "로그인 성공"
@@ -47,10 +38,6 @@ router.post("/login", checkLogin, async (req, res, next) => {
         }
     } catch (error) {
         next(error)
-    } finally {
-        if (connect) {
-            connect.end() // 연결을 끊어줌
-        }
     }
 })
 
@@ -61,21 +48,17 @@ router.post("/", checkLogin, async (req, res, next) => {
         "message": "",
         "data": null
     }
-    let connect
     try {
-        checkCondition(id, idPattern, "아이디")
-        checkCondition(pw, pwPattern, "비밀번호")
-        checkCondition(phone, phonePattern, "전화번호")
-        checkCondition(email, emailPattern, "이메일")
-        checkCondition(birth, birthPattern, "생년월일")
-        checkCondition(name, namePattern, "이름")
-        checkPwMatch(pw, pw_same)
+        checkCondition(id, "아이디")
+        checkCondition(pw, "비밀번호")
+        checkCondition(phone, "전화번호")
+        checkCondition(email, "이메일")
+        checkCondition(birth, "생년월일")
+        checkCondition(name, "이름")
+        checkSame(pw, pw_same, "비밀번호")
 
-        connect = await connectMysql()
-        const idSql = "SELECT id FROM user WHERE id = ?"
-        const idParams = [id]
-        const idQueryResult = await connect.execute(idSql, idParams)
-        const idQueryData = idQueryResult[0]
+        const idSql = "SELECT id FROM account WHERE id = $1"
+        const idQueryData = await queryModule(idSql, [id])
 
         if (idQueryData.length > 0) {
             const error = new Error("아이디가 중복됨")
@@ -83,10 +66,8 @@ router.post("/", checkLogin, async (req, res, next) => {
             throw error
         }
 
-        const emailSql = "SELECT * FROM user WHERE email = ?"
-        const emailParams = [email]
-        const emailQueryResult = await connect.execute(emailSql, emailParams)
-        const emailQueryData = emailQueryResult[0]
+        const emailSql = "SELECT * FROM account WHERE email = $1"
+        const emailQueryData = await queryModule(emailSql, [email])
 
         if (emailQueryData.length > 0) {
             const error = new Error("이메일이 중복됨")
@@ -94,9 +75,9 @@ router.post("/", checkLogin, async (req, res, next) => {
             throw error
         }
 
-        const insertSql = 'INSERT INTO user (id,pw,phone,name,email,birth) VALUES (?,?,?,?,?,?)'
-        const insertParams = [id, pw, phone, name, email, birth]
-        await connect.execute(insertSql, insertParams)
+        const insertSql = 'INSERT INTO account (id,pw,phone,name,email,birth) VALUES ($1,$2,$3,$4,$5,$6)'
+        await queryModule(insertSql, [id, pw, phone, name, email, birth])
+
         result.message = "회원가입 성공"
         result.data = {
             "id": id,
@@ -107,10 +88,6 @@ router.post("/", checkLogin, async (req, res, next) => {
         res.status(200).send(result)
     } catch (error) {
         next(error)
-    } finally {
-        if (connect) {
-            connect.end()
-        }
     }
 })
 
@@ -135,17 +112,13 @@ router.get("/findid", checkLogin, async (req, res, next) => {
         "message": "",
         "data": null
     }
-    let connect
     try {
-        checkCondition(email, emailPattern, "이메일")
+        checkCondition(email, "이메일")
         const trimName = name.trim()
-        checkCondition(trimName, namePattern, "이름")
+        checkCondition(trimName, "이름")
 
-        connect = await connectMysql()
-        const sql = "SELECT id FROM user WHERE name = ? AND email =?"
-        const params = [trimName, email]
-        const queryResult = await connect.execute(sql, params)
-        const queryData = queryResult[0]
+        const sql = "SELECT id FROM account WHERE name = $1 AND email =$2"
+        const queryData = await queryModule(sql, [trimName, email])
 
         if (queryData.length > 0) {
             result.message = "id 찾기 성공"
@@ -158,10 +131,6 @@ router.get("/findid", checkLogin, async (req, res, next) => {
         }
     } catch (error) {
         next(error)
-    } finally {
-        if (connect) {
-            connect.end()
-        }
     }
 })
 
@@ -172,17 +141,13 @@ router.get("/findpw", checkLogin, async (req, res, next) => {
         "message": "",
         "data": null
     }
-    let connect
     try {
-        checkCondition(email, emailPattern, "이메일")
+        checkCondition(email, "이메일")
         const trimId = id.trim()
-        checkCondition(trimId, idPattern, "아이디")
+        checkCondition(trimId, "아이디")
 
-        connect = await connectMysql()
-        const sql = "SELECT pw FROM user WHERE id = ? AND email =?"
-        const params = [trimId, email]
-        const queryResult = await connect.execute(sql, params)
-        const queryData = queryResult[0]
+        const sql = "SELECT pw FROM account WHERE id = $1 AND email =$2"
+        const queryData = await queryModule(sql, [trimId, email])
 
         if (queryData.length > 0) {
             result.message = "pw 찾기 성공"
@@ -195,10 +160,6 @@ router.get("/findpw", checkLogin, async (req, res, next) => {
         }
     } catch (error) {
         next(error)
-    } finally {
-        if (connect) {
-            connect.end()
-        }
     }
 })
 
@@ -237,17 +198,14 @@ router.put("/", checkLogout, async (req, res, next) => {
         "message": "",
         "data": null
     }
-    let connect
     try {
         checkCondition(name, namePattern, "이름")
         checkCondition(phone, phonePattern, "전화번호")
         checkCondition(pw, pwPattern, "비밀번호")
         checkCondition(birth, birthPattern, "생년월일")
 
-        connect = await connectMysql()
-        const sql = "UPDATE user SET pw=?, name=?, phone=?, birth=? WHERE user_key=?"
-        const params = [pw, name, phone, birth, req.session.userKey]
-        await connect.execute(sql, params)
+        const sql = "UPDATE account SET pw=$1, name=$2, phone=$3, birth=$4 WHERE user_key=$5"
+        await queryModule(sql, [pw, name, phone, birth, req.session.userKey])
 
         result.message = "내 정보 수정 성공"
         result.data = { // 새로 입력한 정보를 보내줌
@@ -263,10 +221,6 @@ router.put("/", checkLogout, async (req, res, next) => {
         res.status(200).send(result)
     } catch (error) {
         next(error)
-    } finally {
-        if (connect) {
-            connect.end()
-        }
     }
 })
 
@@ -276,12 +230,9 @@ router.delete("/", checkLogout, async (req, res, next) => {
         "message": ""
     }
     const userKey = req.session.userKey
-    let connect
     try {
-        connect = await connectMysql()
-        const sql = "DELETE FROM user WHERE user_key= ?"
-        const params = [userKey]
-        await connect.execute(sql, params)
+        const sql = "DELETE FROM account WHERE user_key= $1"
+        await queryModule(sql, [userKey])
 
         result.message = "회원 탈퇴 성공"
         req.session.destroy() //로그아웃
