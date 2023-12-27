@@ -1,29 +1,16 @@
-const { Client } = require("pg")
+const { Pool } = require("pg")
+require("dotenv").config()
 
 const connectPostgres = async () => {
-    const client = new Client({
-        "user": "ubuntu",
-        "password": "1005",
-        "host": "localhost",
-        "database": "week14",
-        "port": 5432
+    const pool = new Pool({
+        user: process.env.DB_USER,
+        password: process.env.DB_PASS,
+        host: process.env.DB_HOST,
+        database: process.env.DB_DATABASE,
+        port: process.env.DB_PORT
     })
 
-    await client.connect()
-    return client
+    return pool
 }
 
-const queryModule = async (sql, params) => {
-    let client
-    try {
-        client = await connectPostgres()
-        const result = await client.query(sql, params)
-        return result.rows
-    } finally {
-        if (client) {
-            client.end()
-        }
-    }
-}
-
-module.exports = queryModule
+module.exports = connectPostgres

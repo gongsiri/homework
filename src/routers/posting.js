@@ -1,6 +1,8 @@
 const router = require("express").Router()
-const query = require("../../database/connect/maria")
+const queryModule = require("../../database/connect/postgres")
 const checkLogout = require("../middleware/checkLogout")
+const checkTrim = require("../modules/checkTrim")
+const checkKey = require("../modules/checkKey")
 
 //게시물 쓰기
 router.post("/", checkLogout, async (req, res, next) => {
@@ -10,19 +12,11 @@ router.post("/", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        if (!content.trim()) {
-            const error = new Error("내용이 공백임")
-            error.status = 400
-            throw error
-        }
-        if (!title.trim()) {
-            const error = new Error("제목이 공백임")
-            error.status = 400
-            throw error
-        }
+        checkTrim(content, "내용")
+        checkTrim(title, "제목")
 
-        const sql = 'INSERT INTO posting (user_key,title,content) VALUES (?,?,?)'
-        await query(sql, [req.session.userKey, title, content])
+        const sql = 'INSERT INTO posting (account_key,title,content) VALUES ($1,$2,$3)'
+        await queryModule(sql, [req.session.userKey, title, content])
 
         result.message = "게시물 쓰기 성공"
         result.data = {
@@ -43,11 +37,11 @@ router.get("/", async (req, res, next) => {
         "data": null
     }
     try {
-        const sql = `SELECT posting.*, user.id AS postingUser 
+        const sql = `SELECT posting.*, account.id AS postingUser 
                     FROM posting 
-                    JOIN user ON posting.user_key = user.user_key 
+                    JOIN account ON posting.account_key = account.account_key 
                     ORDER BY posting.date DESC`
-        const queryData = await query(sql)
+        const queryData = await queryModule(sql)
 
         result.message = "전체 게시물 읽기 성공"
         result.data = queryData
@@ -65,17 +59,13 @@ router.get("/:idx", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        if (!postingKey || postingKey.trim() == "" || postingKey == undefined) {
-            const error = new Error("받아온 게시물 키가 비어있음")
-            error.status = 400
-            throw error
-        }
+        checkKey(postingKey, "게시물")
 
-        const sql = `SELECT posting.*, user.id AS postingUser 
+        const sql = `SELECT posting.*, account.id AS postingUser 
                     FROM posting 
-                    JOIN user ON posting.user_key = user.user_key 
-                    WHERE posting.posting_key =?`
-        const queryData = await query(sql, [postingKey])
+                    JOIN account ON posting.account_key = account.account_key 
+                    WHERE posting.posting_key =$1`
+        const queryData = await queryModule(sql, [postingKey])
 
         if (queryData.length > 0) {
             result.message = "각 게시물 읽기 성공"
@@ -101,24 +91,12 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        if (!postingKey || postingKey.trim() == "" || postingKey == undefined) {
-            const error = new Error("받아온 게시물 키가 비어있음")
-            error.status = 400
-            throw error
-        }
-        if (!content.trim()) {
-            const error = new Error("내용이 공백임")
-            error.status = 400
-            throw error
-        }
-        if (!title.trim()) {
-            const error = new Error("제목이 공백임")
-            error.status = 400
-            throw error
-        }
+        checkKey(postingKey, "게시물")
+        checkTrim(content, "내용")
+        checkTrim(title, "제목")
 
-        const updateSql = "UPDATE posting SET content=?, title=? WHERE posting_key=? AND user_key =?"
-        await query(updateSql, [content, title, postingKey, sessionKey])
+        const sql = "UPDATE posting SET content=$1, title=$2 WHERE posting_key=$3 AND account_key =$4"
+        await queryModule(sql, [content, title, postingKey, sessionKey])
 
         result.message = "게시물 수정 성공"
         result.data = {
@@ -140,14 +118,10 @@ router.delete("/:idx", checkLogout, async (req, res, next) => {
         "message": ""
     }
     try {
-        if (!postingKey || postingKey.trim() == "" || postingKey == undefined) {
-            const error = new Error("받아온 게시물 키가 비어있음")
-            error.status = 400
-            throw error
-        }
+        checkKey(postingKey, "게시물")
 
-        const deleteSql = "DELETE FROM posting WHERE posting_key= ? AND user_key =?"
-        await query(deleteSql, [postingKey, sessionKey])
+        const sql = "DELETE FROM posting WHERE posting_key= $1 AND account_key =$2"
+        await queryModule(sql, [postingKey, sessionKey])
         result.message = "게시물 삭제 성공"
         res.status(200).send(result)
     } catch (error) {

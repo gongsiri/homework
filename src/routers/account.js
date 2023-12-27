@@ -1,5 +1,5 @@
 const router = require("express").Router()
-const queryModule = require("../../database/connect/postgres")
+const queryModule = require("../modules/queryModule")
 const checkCondition = require("../modules/checkCondition")
 const checkSame = require("../modules/checkSame")
 const checkLogin = require("../middleware/checkLogin.js")
@@ -204,7 +204,7 @@ router.put("/", checkLogout, async (req, res, next) => {
         checkCondition(pw, pwPattern, "비밀번호")
         checkCondition(birth, birthPattern, "생년월일")
 
-        const sql = "UPDATE account SET pw=$1, name=$2, phone=$3, birth=$4 WHERE user_key=$5"
+        const sql = "UPDATE account SET pw=$1, name=$2, phone=$3, birth=$4 WHERE account_key=$5"
         await queryModule(sql, [pw, name, phone, birth, req.session.userKey])
 
         result.message = "내 정보 수정 성공"
@@ -231,7 +231,7 @@ router.delete("/", checkLogout, async (req, res, next) => {
     }
     const userKey = req.session.userKey
     try {
-        const sql = "DELETE FROM account WHERE user_key= $1"
+        const sql = "DELETE FROM account WHERE account_key= $1"
         await queryModule(sql, [userKey])
 
         result.message = "회원 탈퇴 성공"

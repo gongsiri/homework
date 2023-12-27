@@ -1,6 +1,8 @@
 const router = require("express").Router()
-const query = require("../../database/connect/maria")
+const queryModule = require("../../database/connect/postgres")
 const checkLogout = require("../middleware/checkLogout")
+const checkTrim = require("../modules/checkTrim")
+const checkKey = require("../modules/checkKey")
 
 //댓글 쓰기
 router.post("/", checkLogout, async (req, res, next) => {
@@ -10,19 +12,11 @@ router.post("/", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        if (!postingKey || postingKey.trim() == "" || postingKey == undefined) {
-            const error = new Error("받아온 게시물 키가 비어있음")
-            error.status = 400
-            throw error
-        }
-        if (!content.trim()) {
-            const error = new Error("내용이 공백임")
-            error.status = 400
-            throw error
-        }
+        checkKey(postingKey, "게시물")
+        checkTrim(content, "내용")
 
-        const insertSql = 'INSERT INTO comment (user_key,posting_key,content) VALUES (?,?,?)'
-        await query(insertSql, [req.session.userKey, postingKey, content])
+        const sql = 'INSERT INTO comment (account_key,posting_key,content) VALUES ($1,$2,$3)'
+        await queryModule(sql, [req.session.userKey, postingKey, content])
 
         result.message = "댓글 쓰기 성공"
         result.data = {
@@ -45,17 +39,13 @@ router.get("/", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        if (!postingKey || postingKey.trim() == "" || postingKey == undefined) {
-            const error = new Error("받아온 게시물 키가 비어있음")
-            error.status = 400
-            throw error
-        }
+        checkKey(postingKey, "게시물")
 
-        const commentSql = "SELECT * FROM comment WHERE posting_key=? ORDER BY date"
-        const commentQueryData = await query(commentSql, [postingKey])
+        const commentSql = "SELECT * FROM comment WHERE posting_key=$1 ORDER BY date"
+        const commentQueryData = await queryModule(commentSql, [postingKey])
 
-        const myCommnetSql = "SELECT * FROM comment WHERE user_key =? ORDER BY date"
-        const myCommentQueryData = await query(myCommnetSql, [sessionKey])
+        const myCommnetSql = "SELECT * FROM comment WHERE account_key =$1 ORDER BY date"
+        const myCommentQueryData = await queryModule(myCommnetSql, [sessionKey])
 
         result.message = "댓글 읽기 성공"
         result.data = { commentQueryData, myCommentQueryData }
@@ -75,19 +65,11 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        if (!commentKey || commentKey.trim() == "" || commentKey == undefined) {
-            const error = new Error("받아온 댓글 키가 비어있음")
-            error.status = 400
-            throw error
-        }
-        if (!content) {
-            const error = new Error("내용이 공백임")
-            error.status = 400
-            throw error
-        }
+        checkKey(commentKey, "댓글")
+        checkTrim(content, "내용")
 
-        const updateSql = "UPDATE comment SET content=? WHERE comment_key=? AND user_key =?"
-        await query(updateSql, [content, commentKey, sessionKey])
+        const sql = "UPDATE comment SET content=$1 WHERE comment_key=$2 AND account_key =$3"
+        await queryModule(sql, [content, commentKey, sessionKey])
 
         result.message = "댓글 수정 성공"
         result.data = {
@@ -105,19 +87,14 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
 //댓글 삭제 
 router.delete("/:idx", checkLogout, async (req, res, next) => {
     const commentKey = req.params.idx
-    const sessionKey = req.session.userKey
     const result = {
         "message": ""
     }
     try {
-        if (!commentKey || commentKey.trim() == "" || commentKey == undefined) {
-            const error = new Error("받아온 댓글 키가 비어있음")
-            error.status = 400
-            throw error
-        }
+        checkKey(commentKey, "댓글")
 
-        const deleteSql = "DELETE FROM comment WHERE comment_key= ?" // session id를 넣어서 비교하는 거 추가
-        await query(deleteSql, [commentKey])
+        const sql = "DELETE FROM comment WHERE comment_key= $1" // session id를 넣어서 비교하는 거 추가
+        await queryModule(sql, [commentKey])
         result.message = "댓글 삭제 성공"
         res.status(200).send(result)
     } catch (error) {
