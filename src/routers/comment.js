@@ -74,7 +74,7 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
         result.message = "댓글 수정 성공"
         result.data = {
             "commentKey": commentKey,
-            "userKey": userKey,
+            "userKey": sessionKey,
             "content": content
         }
         res.status(200).send(result)
@@ -87,14 +87,15 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
 //댓글 삭제 
 router.delete("/:idx", checkLogout, async (req, res, next) => {
     const commentKey = req.params.idx
+    const sessionKey = req.session.userKey
     const result = {
         "message": ""
     }
     try {
         checkKey(commentKey, "댓글")
 
-        const sql = "DELETE FROM comment WHERE comment_key= $1" // session id를 넣어서 비교하는 거 추가
-        await queryModule(sql, [commentKey])
+        const sql = "DELETE FROM comment WHERE comment_key= $1 AND account_key =$2"
+        await queryModule(sql, [commentKey, sessionKey])
         result.message = "댓글 삭제 성공"
         res.status(200).send(result)
     } catch (error) {
