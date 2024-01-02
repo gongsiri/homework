@@ -1,8 +1,11 @@
-const checkTrim = (input) => {
+const checkTrim = (input, inputType = "body") => {
     return (req, res, next) => {
         try {
-            const value = req.body[input]
-            if (!value || value.trim() == "" || value == undefined) {
+            let value
+            if (inputType === "params") {
+                value = req.params[input]
+            }
+            if (!value || value.trim() === "" || value == undefined) {
                 const error = new Error(`${input}이(가) 공백임`)
                 error.status = 400
                 throw error

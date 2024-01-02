@@ -4,25 +4,17 @@ const checkLogout = require("../middleware/checkLogout")
 const checkTrim = require("../middleware/checkTrim")
 
 //댓글 쓰기
-router.post("/", checkLogout, async (req, res, next) => {
+router.post("/", checkLogout, checkTrim("postingKey"), checkTrim("content"), async (req, res, next) => {
     const { content, postingKey } = req.body
     const result = {
         "message": "",
         "data": null
     }
     try {
-        checkTrim(postingKey, "게시물")
-        checkTrim(content, "내용")
-
         const sql = 'INSERT INTO comment (account_key,posting_key,content) VALUES ($1,$2,$3)'
         await queryModule(sql, [req.session.userKey, postingKey, content])
 
         result.message = "댓글 쓰기 성공"
-        result.data = { // 굳이
-            "postingKey": postingKey,
-            "id": req.session.userId,
-            "content": content
-        }
         res.status(200).send(result)
     } catch (error) {
         next(error)
@@ -30,7 +22,7 @@ router.post("/", checkLogout, async (req, res, next) => {
 })
 
 //댓글 읽기
-router.get("/", checkLogout, async (req, res, next) => {
+router.get("/", checkLogout, checkTrim("postingKey"), async (req, res, next) => {
     const { postingKey } = req.body
     const sessionKey = req.session.userKey
     const result = {
@@ -38,8 +30,6 @@ router.get("/", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        checkTrim(postingKey, "게시물")
-
         const commentSql = "SELECT * FROM comment WHERE posting_key=$1 ORDER BY date"
         const commentQueryData = await queryModule(commentSql, [postingKey])
 
@@ -55,7 +45,7 @@ router.get("/", checkLogout, async (req, res, next) => {
 })
 
 //댓글 수정
-router.put("/:idx", checkLogout, async (req, res, next) => {
+router.put("/:idx", checkLogout, checkTrim("commentKey", "params"), checkTrim("content"), async (req, res, next) => {
     const { content } = req.body
     const commentKey = req.params.idx
     const sessionKey = req.session.userKey
@@ -64,9 +54,6 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        checkTrim(commentKey, "댓글")
-        checkTrim(content, "내용")
-
         const sql = "UPDATE comment SET content=$1 WHERE comment_key=$2 AND account_key =$3"
         await queryModule(sql, [content, commentKey, sessionKey])
 
@@ -84,15 +71,13 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
 })
 
 //댓글 삭제 
-router.delete("/:idx", checkLogout, async (req, res, next) => {
+router.delete("/:idx", checkLogout, checkTrim("commentKey", "params"), async (req, res, next) => {
     const commentKey = req.params.idx
     const sessionKey = req.session.userKey
     const result = {
         "message": ""
     }
     try {
-        checkTrim(commentKey, "댓글")
-
         const sql = "DELETE FROM comment WHERE comment_key= $1 AND account_key =$2"
         await queryModule(sql, [commentKey, sessionKey])
         result.message = "댓글 삭제 성공"

@@ -4,16 +4,13 @@ const checkLogout = require("../middleware/checkLogout")
 const checkTrim = require("../middleware/checkTrim")
 
 //게시물 쓰기
-router.post("/", checkLogout, async (req, res, next) => {
+router.post("/", checkLogout, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
     const { content, title } = req.body
     const result = {
         "message": "",
         "data": null
     }
     try {
-        checkTrim(content, "내용")
-        checkTrim(title, "제목")
-
         const sql = 'INSERT INTO posting (account_key,title,content) VALUES ($1,$2,$3)'
         await queryModule(sql, [req.session.userKey, title, content])
 
@@ -51,15 +48,13 @@ router.get("/", async (req, res, next) => {
 })
 
 //각 게시물 읽기
-router.get("/:idx", checkLogout, async (req, res, next) => { // 여기도 내 거인지 아닌지 줘야 함
+router.get("/:idx", checkLogout, checkTrim("postingKey", "params"), async (req, res, next) => { // 여기도 내 거인지 아닌지 줘야 함
     const postingKey = req.params.idx
     const result = {
         "message": "",
         "data": null
     }
     try {
-        checkTrim(postingKey, "게시물")
-
         const sql = `SELECT posting.*, account.id AS postingUser 
                     FROM posting 
                     JOIN account ON posting.account_key = account.account_key 
@@ -81,7 +76,7 @@ router.get("/:idx", checkLogout, async (req, res, next) => { // 여기도 내 �
 })
 
 //게시물 수정
-router.put("/:idx", checkLogout, async (req, res, next) => {
+router.put("/:idx", checkLogout, checkTrim("postingKey", "params"), checkTrim("content"), checkTrim("title"), async (req, res, next) => {
     const { content, title } = req.body
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
@@ -90,10 +85,6 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        checkTrim(postingKey, "게시물")
-        checkTrim(content, "내용")
-        checkTrim(title, "제목")
-
         const sql = "UPDATE posting SET content=$1, title=$2 WHERE posting_key=$3 AND account_key =$4"
         await queryModule(sql, [content, title, postingKey, sessionKey])
 
@@ -110,15 +101,13 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
 })
 
 //게시물 삭제
-router.delete("/:idx", checkLogout, async (req, res, next) => {
+router.delete("/:idx", checkLogout, checkTrim("postingKey", "params"), async (req, res, next) => {
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
     const result = {
         "message": ""
     }
     try {
-        checkTrim(postingKey, "게시물")
-
         const sql = "DELETE FROM posting WHERE posting_key= $1 AND account_key =$2"
         await queryModule(sql, [postingKey, sessionKey])
         result.message = "게시물 삭제 성공"
