@@ -61,15 +61,15 @@ router.get("/:idx", checkLogout, checkTrim("postingKey", "params"), async (req, 
                     WHERE posting.posting_key =$1`
         const queryData = await queryModule(sql, [postingKey])
 
-        if (queryData.length > 0) {
-            result.message = "각 게시물 읽기 성공"
-            result.data = queryData[0]
-            res.status(200).send(result)
-        } else {
+        if (queryData.length == 0) {
             const error = new Error("게시물이 존재하지 않음")
             error.status = 204 // 404 말고 (통신은 되긴 했으니까) 굳이 필요 없음
             throw error
         }
+
+        result.message = "각 게시물 읽기 성공"
+        result.data = queryData[0]
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }

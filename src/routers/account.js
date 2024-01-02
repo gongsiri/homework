@@ -23,23 +23,21 @@ router.post("/login", checkLogin, checkCondition("id", idPattern, true), checkCo
         const sql = 'SELECT * FROM account WHERE id =$1 AND pw= $2'
         const queryData = await queryModule(sql, [trimId, pw])
 
-        if (queryData.length > 0) { // 성공 실패 순서 바꾸기
-            result.message = "로그인 성공"
-
-            req.session.isLogin = true
-            req.session.userId = trimId // 세션에 정보 저장
-            req.session.userKey = queryData[0].user_key
-            req.session.phone = queryData[0].phone
-            req.session.email = queryData[0].email
-            req.session.name = queryData[0].name
-            req.session.save()
-            res.status(200).send(result)
-        }
-        else {
+        if (queryData.length === 0) {
             const error = new Error("로그인 실패")
             error.status = 401
             throw error
         }
+
+        req.session.isLogin = true
+        req.session.userId = trimId // 세션에 정보 저장
+        req.session.userKey = queryData[0].user_key
+        req.session.phone = queryData[0].phone
+        req.session.email = queryData[0].email
+        req.session.name = queryData[0].name
+        req.session.save()
+        result.message = "로그인 성공"
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
@@ -114,15 +112,15 @@ router.get("/findid", checkLogin, checkCondition("email", emailPattern), checkCo
         const sql = "SELECT id FROM account WHERE name = $1 AND email =$2"
         const queryData = await queryModule(sql, [trimName, email])
 
-        if (queryData.length > 0) {
-            result.message = "id 찾기 성공"
-            result.data = queryData[0]
-            res.status(200).send(result)
-        } else {
+        if (queryData.length === 0) {
             const error = new Error("해당하는 계정이 없음")
             error.status = 404
             throw error
         }
+
+        result.message = "id 찾기 성공"
+        result.data = queryData[0]
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
@@ -141,15 +139,15 @@ router.get("/findpw", checkLogin, checkCondition("email", emailPattern), checkCo
         const sql = "SELECT pw FROM account WHERE id = $1 AND email =$2"
         const queryData = await queryModule(sql, [trimId, email])
 
-        if (queryData.length > 0) {
-            result.message = "pw 찾기 성공"
-            result.data = queryData[0]
-            res.status(200).send(result)
-        } else {
+        if (queryData.length === 0) {
             const error = new Error("해당하는 계정이 없음")
             error.status = 404
             throw error
         }
+
+        result.message = "pw 찾기 성공"
+        result.data = queryData[0]
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
