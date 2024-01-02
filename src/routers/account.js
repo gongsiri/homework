@@ -1,7 +1,7 @@
 const router = require("express").Router()
 const queryModule = require("../modules/queryModule")
-const checkCondition = require("../modules/checkCondition")
-const checkSame = require("../modules/checkSame")
+const checkCondition = require("../middleware/checkCondition")
+const checkSame = require("../middleware/checkSame")
 const checkLogin = require("../middleware/checkLogin")
 const checkLogout = require("../middleware/checkLogout")
 const selectPattern = require("../modules/selectPattern")
@@ -13,7 +13,7 @@ const birthPattern = selectPattern.birthPattern
 const phonePattern = selectPattern.phonePattern
 
 //로그인
-router.post("/login", checkLogin, checkCondition("id", idPattern), checkCondition("pw", pwPattern), async (req, res, next) => {
+router.post("/login", checkLogin, checkCondition("id", idPattern, true), checkCondition("pw", pwPattern), async (req, res, next) => {
     const { id, pw } = req.body
     const result = {
         "message": ""
@@ -46,15 +46,13 @@ router.post("/login", checkLogin, checkCondition("id", idPattern), checkConditio
 })
 
 //회원가입
-router.post("/", checkLogin, checkCondition("id", idPattern), checkCondition("pw", pwPattern), checkCondition("phone", phonePattern), checkCondition("email", emailPattern), checkCondition("birth", birthPattern), checkCondition("name", namePattern), async (req, res, next) => {
-    const { id, pw, pw_same, phone, name, email, birth } = req.body
+router.post("/", checkLogin, checkCondition("id", idPattern), checkCondition("pw", pwPattern), checkCondition("phone", phonePattern), checkCondition("email", emailPattern), checkCondition("birth", birthPattern), checkCondition("name", namePattern), checkSame("pw", "pwSame"), async (req, res, next) => {
+    const { id, pw, pwSame, phone, name, email, birth } = req.body
     const result = {
         "message": "",
         "data": null
     }
     try {
-        checkSame(pw, pw_same, "비밀번호")
-
         const idSql = "SELECT id FROM account WHERE id = $1"
         const idQueryData = await queryModule(idSql, [id])
 
@@ -104,7 +102,7 @@ router.post("/logout", checkLogout, (req, res, next) => {
 })
 
 //id 찾기
-router.get("/findid", checkLogin, checkCondition("email", emailPattern), checkCondition("name", namePattern), async (req, res, next) => {
+router.get("/findid", checkLogin, checkCondition("email", emailPattern), checkCondition("name", namePattern, true), async (req, res, next) => {
     const { name, email } = req.body
     const result = {
         "message": "",
@@ -131,7 +129,7 @@ router.get("/findid", checkLogin, checkCondition("email", emailPattern), checkCo
 })
 
 //pw 찾기
-router.get("/findpw", checkLogin, checkCondition("email", emailPattern), checkCondition("id", idPattern), async (req, res, next) => {
+router.get("/findpw", checkLogin, checkCondition("email", emailPattern), checkCondition("id", idPattern, true), async (req, res, next) => {
     const { id, email } = req.body
     const result = {
         "message": "",

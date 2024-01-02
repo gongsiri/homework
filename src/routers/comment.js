@@ -1,7 +1,7 @@
 const router = require("express").Router()
 const queryModule = require("../../database/connect/postgres")
 const checkLogout = require("../middleware/checkLogout")
-const checkTrim = require("../modules/checkTrim")
+const checkTrim = require("../middleware/checkTrim")
 
 //댓글 쓰기
 router.post("/", checkLogout, async (req, res, next) => {
