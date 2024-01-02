@@ -2,7 +2,6 @@ const router = require("express").Router()
 const queryModule = require("../../database/connect/postgres")
 const checkLogout = require("../middleware/checkLogout")
 const checkTrim = require("../modules/checkTrim")
-const checkKey = require("../modules/checkKey")
 
 //게시물 쓰기
 router.post("/", checkLogout, async (req, res, next) => {
@@ -59,7 +58,7 @@ router.get("/:idx", checkLogout, async (req, res, next) => { // 여기도 내 �
         "data": null
     }
     try {
-        checkKey(postingKey, "게시물")
+        checkTrim(postingKey, "게시물")
 
         const sql = `SELECT posting.*, account.id AS postingUser 
                     FROM posting 
@@ -91,7 +90,7 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        checkKey(postingKey, "게시물")
+        checkTrim(postingKey, "게시물")
         checkTrim(content, "내용")
         checkTrim(title, "제목")
 
@@ -118,7 +117,7 @@ router.delete("/:idx", checkLogout, async (req, res, next) => {
         "message": ""
     }
     try {
-        checkKey(postingKey, "게시물")
+        checkTrim(postingKey, "게시물")
 
         const sql = "DELETE FROM posting WHERE posting_key= $1 AND account_key =$2"
         await queryModule(sql, [postingKey, sessionKey])

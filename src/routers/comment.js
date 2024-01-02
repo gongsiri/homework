@@ -2,7 +2,6 @@ const router = require("express").Router()
 const queryModule = require("../../database/connect/postgres")
 const checkLogout = require("../middleware/checkLogout")
 const checkTrim = require("../modules/checkTrim")
-const checkKey = require("../modules/checkKey")
 
 //댓글 쓰기
 router.post("/", checkLogout, async (req, res, next) => {
@@ -12,7 +11,7 @@ router.post("/", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        checkKey(postingKey, "게시물")
+        checkTrim(postingKey, "게시물")
         checkTrim(content, "내용")
 
         const sql = 'INSERT INTO comment (account_key,posting_key,content) VALUES ($1,$2,$3)'
@@ -39,7 +38,7 @@ router.get("/", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        checkKey(postingKey, "게시물")
+        checkTrim(postingKey, "게시물")
 
         const commentSql = "SELECT * FROM comment WHERE posting_key=$1 ORDER BY date"
         const commentQueryData = await queryModule(commentSql, [postingKey])
@@ -65,7 +64,7 @@ router.put("/:idx", checkLogout, async (req, res, next) => {
         "data": null
     }
     try {
-        checkKey(commentKey, "댓글")
+        checkTrim(commentKey, "댓글")
         checkTrim(content, "내용")
 
         const sql = "UPDATE comment SET content=$1 WHERE comment_key=$2 AND account_key =$3"
@@ -92,7 +91,7 @@ router.delete("/:idx", checkLogout, async (req, res, next) => {
         "message": ""
     }
     try {
-        checkKey(commentKey, "댓글")
+        checkTrim(commentKey, "댓글")
 
         const sql = "DELETE FROM comment WHERE comment_key= $1 AND account_key =$2"
         await queryModule(sql, [commentKey, sessionKey])

@@ -2,20 +2,24 @@ const router = require("express").Router()
 const queryModule = require("../modules/queryModule")
 const checkCondition = require("../modules/checkCondition")
 const checkSame = require("../modules/checkSame")
-const checkLogin = require("../middleware/checkLogin.js")
-const checkLogout = require("../middleware/checkLogout.js")
+const checkLogin = require("../middleware/checkLogin")
+const checkLogout = require("../middleware/checkLogout")
+const selectPattern = require("../modules/selectPattern")
+const idPattern = selectPattern.idPattern
+const pwPattern = selectPattern.pwPattern
+const namePattern = selectPattern.namePattern
+const emailPattern = selectPattern.emailPattern
+const birthPattern = selectPattern.birthPattern
+const phonePattern = selectPattern.phonePattern
 
 //로그인
-router.post("/login", checkLogin, async (req, res, next) => {
+router.post("/login", checkLogin, checkCondition("id", idPattern), checkCondition("pw", pwPattern), async (req, res, next) => {
     const { id, pw } = req.body
     const result = {
         "message": ""
     }
     try {
         const trimId = id.trim() // 아이디 앞뒤 공백 제거
-        checkCondition(trimId, "아이디", idPattern) // 유효성 검사 정규식을 받아와서 여기에 넣자 "아이디" 말고
-        checkCondition(pw, "비밀번호", pwPattern)
-
         const sql = 'SELECT * FROM account WHERE id =$1 AND pw= $2'
         const queryData = await queryModule(sql, [trimId, pw])
 
@@ -42,19 +46,13 @@ router.post("/login", checkLogin, async (req, res, next) => {
 })
 
 //회원가입
-router.post("/", checkLogin, async (req, res, next) => {
+router.post("/", checkLogin, checkCondition("id", idPattern), checkCondition("pw", pwPattern), checkCondition("phone", phonePattern), checkCondition("email", emailPattern), checkCondition("birth", birthPattern), checkCondition("name", namePattern), async (req, res, next) => {
     const { id, pw, pw_same, phone, name, email, birth } = req.body
     const result = {
         "message": "",
         "data": null
     }
     try {
-        checkCondition(id, "아이디", idPattern)
-        checkCondition(pw, "비밀번호", pwPattern)
-        checkCondition(phone, "전화번호", phonePattern)
-        checkCondition(email, "이메일", emailPattern)
-        checkCondition(birth, "생년월일", birthPattern)
-        checkCondition(name, "이름", namePattern)
         checkSame(pw, pw_same, "비밀번호")
 
         const idSql = "SELECT id FROM account WHERE id = $1"
@@ -106,16 +104,14 @@ router.post("/logout", checkLogout, (req, res, next) => {
 })
 
 //id 찾기
-router.get("/findid", checkLogin, async (req, res, next) => {
+router.get("/findid", checkLogin, checkCondition("email", emailPattern), checkCondition("name", namePattern), async (req, res, next) => {
     const { name, email } = req.body
     const result = {
         "message": "",
         "data": null
     }
     try {
-        checkCondition(email, "이메일", emailPattern)
         const trimName = name.trim()
-        checkCondition(trimName, "이름", namePattern)
 
         const sql = "SELECT id FROM account WHERE name = $1 AND email =$2"
         const queryData = await queryModule(sql, [trimName, email])
@@ -135,16 +131,14 @@ router.get("/findid", checkLogin, async (req, res, next) => {
 })
 
 //pw 찾기
-router.get("/findpw", checkLogin, async (req, res, next) => {
+router.get("/findpw", checkLogin, checkCondition("email", emailPattern), checkCondition("id", idPattern), async (req, res, next) => {
     const { id, email } = req.body
     const result = {
         "message": "",
         "data": null
     }
     try {
-        checkCondition(email, "이메일", emailPattern)
         const trimId = id.trim()
-        checkCondition(trimId, "아이디", idPattern)
 
         const sql = "SELECT pw FROM account WHERE id = $1 AND email =$2"
         const queryData = await queryModule(sql, [trimId, email])
@@ -192,18 +186,13 @@ router.get("/", checkLogout, (req, res, next) => {
 })
 
 //내 정보 수정하기
-router.put("/", checkLogout, async (req, res, next) => {
+router.put("/", checkLogout, checkCondition("name", namePattern), checkCondition("phone", phonePattern), checkCondition("pw", pwPattern), checkCondition("birth", birthPattern), async (req, res, next) => {
     const { name, phone, pw, birth } = req.body
     const result = {
         "message": "",
         "data": null
     }
     try {
-        checkCondition(name, "이름", namePattern)
-        checkCondition(phone, "전화번호", phonePattern)
-        checkCondition(pw, "비밀번호", pwPattern)
-        checkCondition(birth, "생년월일", birthPattern)
-
         const sql = "UPDATE account SET pw=$1, name=$2, phone=$3, birth=$4 WHERE account_key=$5"
         await queryModule(sql, [pw, name, phone, birth, req.session.userKey])
 
