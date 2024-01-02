@@ -52,7 +52,7 @@ router.get("/", async (req, res, next) => {
 })
 
 //각 게시물 읽기
-router.get("/:idx", checkLogout, async (req, res, next) => {
+router.get("/:idx", checkLogout, async (req, res, next) => { // 여기도 내 거인지 아닌지 줘야 함
     const postingKey = req.params.idx
     const result = {
         "message": "",

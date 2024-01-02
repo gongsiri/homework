@@ -7,7 +7,7 @@ const queryModule = async (sql, params) => {
         client = await pool.connect() // 연결 풀에서 클라이언트 얻음
         const result = await client.query(sql, params) // 쿼리 실행
         return result.rows
-    } finally {
+    } finally { // catch
         if (client) {
             client.release() // 클라이언트 해제
         }

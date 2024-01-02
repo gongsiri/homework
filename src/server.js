@@ -21,7 +21,7 @@ app.use("/posting", postingApi)
 const commentApi = require("./routers/comment")
 app.use("/comment", commentApi)
 
-app.use(function (err, req, res, next) { // 에러 처리
+app.use((err, req, res, next) => { // 에러 처리
     res.status(err.status || 500).send({
         message: err.message || "오류 발생"
     })
