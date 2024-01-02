@@ -31,7 +31,7 @@ router.post("/login", checkLogin, checkCondition("id", idPattern, true), checkCo
 
         req.session.isLogin = true
         req.session.userId = trimId // 세션에 정보 저장
-        req.session.userKey = queryData[0].user_key
+        req.session.userKey = queryData[0].account_key
         req.session.phone = queryData[0].phone
         req.session.email = queryData[0].email
         req.session.name = queryData[0].name

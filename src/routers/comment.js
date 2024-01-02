@@ -1,14 +1,13 @@
 const router = require("express").Router()
-const queryModule = require("../../database/connect/postgres")
+const queryModule = require("../modules/queryModule")
 const checkLogout = require("../middleware/checkLogout")
 const checkTrim = require("../middleware/checkTrim")
 
 //댓글 쓰기
-router.post("/", checkLogout, checkTrim("postingKey"), checkTrim("content"), async (req, res, next) => {
+router.post("/", checkLogout, checkTrim("content"), async (req, res, next) => {
     const { content, postingKey } = req.body
     const result = {
-        "message": "",
-        "data": null
+        "message": ""
     }
     try {
         const sql = 'INSERT INTO comment (account_key,posting_key,content) VALUES ($1,$2,$3)'
@@ -22,7 +21,7 @@ router.post("/", checkLogout, checkTrim("postingKey"), checkTrim("content"), asy
 })
 
 //댓글 읽기
-router.get("/", checkLogout, checkTrim("postingKey"), async (req, res, next) => {
+router.get("/", checkLogout, async (req, res, next) => {
     const { postingKey } = req.body
     const sessionKey = req.session.userKey
     const result = {
@@ -30,14 +29,19 @@ router.get("/", checkLogout, checkTrim("postingKey"), async (req, res, next) => 
         "data": null
     }
     try {
-        const commentSql = "SELECT * FROM comment WHERE posting_key=$1 ORDER BY date"
-        const commentQueryData = await queryModule(commentSql, [postingKey])
+        const sql = "SELECT * FROM comment WHERE posting_key=$1 ORDER BY create_at"
+        const queryData = await queryModule(sql, [postingKey])
 
-        const myCommnetSql = "SELECT * FROM comment WHERE account_key =$1 ORDER BY date" // 좋지 않음(삭제) 반복문을 돌려서 session 비교해서 같다면 commentQueryData에 (map으로) 컬럼 추가
-        const myCommentQueryData = await queryModule(myCommnetSql, [sessionKey])
+        queryData.forEach(elem => {
+            if (elem.account_key != sessionKey) {
+                elem.isMine = false
+            } else {
+                elem.isMine = true
+            }
+        })
 
         result.message = "댓글 읽기 성공"
-        result.data = { commentQueryData, myCommentQueryData }
+        result.data = { QueryData }
         res.status(200).send(result)
     } catch (error) {
         next(error)
@@ -45,7 +49,7 @@ router.get("/", checkLogout, checkTrim("postingKey"), async (req, res, next) => 
 })
 
 //댓글 수정
-router.put("/:idx", checkLogout, checkTrim("commentKey", "params"), checkTrim("content"), async (req, res, next) => {
+router.put("/:idx", checkLogout, checkTrim("content"), async (req, res, next) => {
     const { content } = req.body
     const commentKey = req.params.idx
     const sessionKey = req.session.userKey
@@ -71,7 +75,7 @@ router.put("/:idx", checkLogout, checkTrim("commentKey", "params"), checkTrim("c
 })
 
 //댓글 삭제 
-router.delete("/:idx", checkLogout, checkTrim("commentKey", "params"), async (req, res, next) => {
+router.delete("/:idx", checkLogout, async (req, res, next) => {
     const commentKey = req.params.idx
     const sessionKey = req.session.userKey
     const result = {
