@@ -13,7 +13,6 @@ router.post("/", checkLogout, checkTrim("content"), async (req, res, next) => {
         const sql = 'INSERT INTO comment (account_key,posting_key,content) VALUES ($1,$2,$3)'
         await queryModule(sql, [req.session.userKey, postingKey, content])
 
-        result.message = "댓글 쓰기 성공"
         res.status(200).send(result)
     } catch (error) {
         next(error)
@@ -40,8 +39,7 @@ router.get("/", checkLogout, async (req, res, next) => {
             }
         })
 
-        result.message = "댓글 읽기 성공"
-        result.data = { QueryData }
+        result.data = queryData
         res.status(200).send(result)
     } catch (error) {
         next(error)
@@ -61,7 +59,6 @@ router.put("/:idx", checkLogout, checkTrim("content"), async (req, res, next) =>
         const sql = "UPDATE comment SET content=$1 WHERE comment_key=$2 AND account_key =$3"
         await queryModule(sql, [content, commentKey, sessionKey])
 
-        result.message = "댓글 수정 성공"
         result.data = {
             "commentKey": commentKey,
             "userKey": sessionKey,
@@ -84,7 +81,6 @@ router.delete("/:idx", checkLogout, async (req, res, next) => {
     try {
         const sql = "DELETE FROM comment WHERE comment_key= $1 AND account_key =$2"
         await queryModule(sql, [commentKey, sessionKey])
-        result.message = "댓글 삭제 성공"
         res.status(200).send(result)
     } catch (error) {
         next(error)

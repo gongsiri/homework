@@ -36,7 +36,6 @@ router.post("/login", checkLogin, checkCondition("id", idPattern, true), checkCo
         req.session.email = queryData[0].email
         req.session.name = queryData[0].name
         req.session.save()
-        result.message = "로그인 성공"
         res.status(200).send(result)
     } catch (error) {
         next(error)
@@ -45,7 +44,7 @@ router.post("/login", checkLogin, checkCondition("id", idPattern, true), checkCo
 
 //회원가입
 router.post("/", checkLogin, checkCondition("id", idPattern), checkCondition("pw", pwPattern), checkCondition("phone", phonePattern), checkCondition("email", emailPattern), checkCondition("birth", birthPattern), checkCondition("name", namePattern), checkSame("pw", "pwSame"), async (req, res, next) => {
-    const { id, pw, pwSame, phone, name, email, birth } = req.body
+    const { id, pw, phone, name, email, birth } = req.body
     const result = {
         "message": "",
         "data": null
@@ -72,7 +71,6 @@ router.post("/", checkLogin, checkCondition("id", idPattern), checkCondition("pw
         const insertSql = 'INSERT INTO account (id,pw,phone,name,email,birth) VALUES ($1,$2,$3,$4,$5,$6)'
         await queryModule(insertSql, [id, pw, phone, name, email, birth])
 
-        result.message = "회원가입 성공"
         result.data = {
             "id": id,
             "email": email,
@@ -91,7 +89,6 @@ router.post("/logout", checkLogout, (req, res, next) => {
         "message": ""
     }
     try {
-        result.message = "로그아웃 성공"
         req.session.destroy() // 세션 삭제
         res.status(200).send(result)
     } catch (error) {
@@ -118,7 +115,6 @@ router.get("/findid", checkLogin, checkCondition("email", emailPattern), checkCo
             throw error
         }
 
-        result.message = "id 찾기 성공"
         result.data = queryData[0]
         res.status(200).send(result)
     } catch (error) {
@@ -145,7 +141,6 @@ router.get("/findpw", checkLogin, checkCondition("email", emailPattern), checkCo
             throw error
         }
 
-        result.message = "pw 찾기 성공"
         result.data = queryData[0]
         res.status(200).send(result)
     } catch (error) {
@@ -166,7 +161,6 @@ router.get("/", checkLogout, (req, res, next) => {
         "data": null // 사용자 정보
     }
     try {
-        result.message = "내 정보 보기 성공"
         result.data = {
             "userKey": userKey,
             "id": id,
@@ -192,7 +186,6 @@ router.put("/", checkLogout, checkCondition("name", namePattern), checkCondition
         const sql = "UPDATE account SET pw=$1, name=$2, phone=$3, birth=$4 WHERE account_key=$5"
         await queryModule(sql, [pw, name, phone, birth, req.session.userKey])
 
-        result.message = "내 정보 수정 성공"
         result.data = { // 새로 입력한 정보를 보내줌
             "userKey": req.session.userKey,
             "id": req.session.userId,
@@ -219,7 +212,6 @@ router.delete("/", checkLogout, async (req, res, next) => {
         const sql = "DELETE FROM account WHERE account_key= $1"
         await queryModule(sql, [userKey])
 
-        result.message = "회원 탈퇴 성공"
         req.session.destroy() //로그아웃
         res.status(200).send(result)
     } catch (error) {

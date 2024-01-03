@@ -16,7 +16,6 @@ router.post("/", checkLogout, checkTrim("content"), checkTrim("title"), async (r
         const sql = 'INSERT INTO posting (account_key,title,content) VALUES ($1,$2,$3)'
         await queryModule(sql, [userKey, title, content])
 
-        result.message = "게시물 쓰기 성공"
         result.data = {
             "id": req.session.userId,
             "content": content,
@@ -40,7 +39,6 @@ router.get("/", async (req, res, next) => {
         JOIN account ON posting.account_key = account.account_key 
         ORDER BY posting.create_at DESC`
         const queryData = await queryModule(sql)
-        result.message = "전체 게시물 읽기 성공"
         result.data = queryData
         res.status(200).send(result)
     } catch (error) {
@@ -76,7 +74,7 @@ router.get("/:idx", checkLogout, async (req, res, next) => { // 여기도 내 �
             error.status = 204 // 404 말고 (통신은 되긴 했으니까) 굳이 필요 없음
             throw error
         }
-        result.message = "각 게시물 읽기 성공"
+
         result.data = queryData[0]
         res.status(200).send(result)
     } catch (error) {
@@ -97,7 +95,6 @@ router.put("/:idx", checkLogout, checkTrim("content"), checkTrim("title"), async
         const sql = "UPDATE posting SET content=$1, title=$2 WHERE posting_key=$3 AND account_key =$4"
         await queryModule(sql, [content, title, postingKey, sessionKey])
 
-        result.message = "게시물 수정 성공"
         result.data = {
             "postingKey": postingKey,
             "content": content,
@@ -119,7 +116,7 @@ router.delete("/:idx", checkLogout, async (req, res, next) => {
     try {
         const sql = "DELETE FROM posting WHERE posting_key= $1 AND account_key =$2"
         await queryModule(sql, [postingKey, sessionKey])
-        result.message = "게시물 삭제 성공"
+
         res.status(200).send(result)
     } catch (error) {
         next(error)
