@@ -5,6 +5,7 @@ const checkSame = require("../middleware/checkSame")
 const checkLogin = require("../middleware/checkLogin")
 const checkLogout = require("../middleware/checkLogout")
 const selectPattern = require("../modules/selectPattern")
+const sendModule = require("../modules/sendMoudle")
 const idPattern = selectPattern.idPattern
 const pwPattern = selectPattern.pwPattern
 const namePattern = selectPattern.namePattern
@@ -35,8 +36,9 @@ router.post("/login", checkLogin, checkCondition("id", idPattern, true), checkCo
         req.session.phone = queryData[0].phone
         req.session.email = queryData[0].email
         req.session.name = queryData[0].name
+        req.session.isAdmin = queryData[0].is_admin
         req.session.save()
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
@@ -77,7 +79,7 @@ router.post("/", checkLogin, checkCondition("id", idPattern), checkCondition("pw
             "name": name,
             "birth": birth
         }
-        res.status(200).send(result)
+        res.status(200).send(result) // sendMoudle 호출 (바꾸자)
     } catch (error) {
         next(error)
     }
