@@ -1,28 +1,30 @@
 const router = require("express").Router()
 const connectMongoDB = require("../../database/connect/mongodb")
-const adminAuth = require("../middleware/adminAuth")
+const isAdmin = require("../middleware/isAdmin")
 
 //로그 목록 가져오는 api (여기에 모든 기능)
-router.get('/all', adminAuth, async (req, res, next) => {
-    const { userId, order, api, dateStart, dateEnd, timeStart, timeEnd } = req.query
-    const result = {}
+router.get('/all', isAdmin, async (req, res, next) => { // 관리자 권한만
+    const { userId, order, api, dateStart, dateEnd } = req.query
+    const result = {} // 결과값
     const query = {} // 조건
+    const pattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
+
     if (userId) {
         query['userId'] = userId
     }
     if (api) {
         query['apiName'] = api
     }
-    if (dateStart && dateEnd) {
-        const dateStartQuery = new Date(`${dateStart}T00:00:00`)
-        const dateEndQuery = new Date(`${dateEnd}T00:00:00`)
-        query['day'] = { '$gte': dateStartQuery, '$lte': dateEndQuery }
+    if (dateStart && pattern.test(dateStart)) {
+        if (dateEnd && pattern.test(dateEnd)) { // 시작과 끝이 모두 있는 경우
+            query['time'] = { '$gte': new Date(dateStart), '$lte': new Date(dateEnd) }
+        } else { // 시작만 있는 경우
+            query['time'] = { '$gte': new Date(dateStart) }
+        }
+    } else if (dateEnd && pattern.test(dateEnd)) { // 끝만 있는 경우
+        query['time'] = { '$lte': new Date(dateEnd) }
     }
-    if (timeStart && timeEnd) {
-        const timeStartQuery = new Date(`${timeStart}T00:00:00`)
-        const timeEndQuery = new Date(`${timeEnd}T00:00:00`)
-        query['time'] = { '$gte': timeStartQuery, '$lte': timeEndQuery }
-    }
+
     let sortOrder
     if (order === 'asc') {
         sortOrder = 1
@@ -38,11 +40,9 @@ router.get('/all', adminAuth, async (req, res, next) => {
         result.data = logData
     } catch (error) {
         console.log(error)
+        next(error)
     }
     res.status(200).send(result)
 })
 
 module.exports = router
-
-// alter table user_th add column is_admin boolean NOT NULL default false
-//관리자 유무 넣어줌

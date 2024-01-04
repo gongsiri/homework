@@ -1,10 +1,11 @@
 const router = require("express").Router()
 const queryModule = require("../modules/queryModule")
-const checkLogout = require("../middleware/checkLogout")
+const isLogout = require("../middleware/isLogout")
 const checkTrim = require("../middleware/checkTrim")
+const sendModule = require("../modules/sendMoudle")
 
 //댓글 쓰기
-router.post("/", checkLogout, checkTrim("content"), async (req, res, next) => {
+router.post("/", isLogout, checkTrim("content"), async (req, res, next) => {
     const { content, postingKey } = req.body
     const result = {
         "message": ""
@@ -13,14 +14,14 @@ router.post("/", checkLogout, checkTrim("content"), async (req, res, next) => {
         const sql = 'INSERT INTO comment (account_key,posting_key,content) VALUES ($1,$2,$3)'
         await queryModule(sql, [req.session.userKey, postingKey, content])
 
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //댓글 읽기
-router.get("/", checkLogout, async (req, res, next) => {
+router.get("/", isLogout, async (req, res, next) => {
     const { postingKey } = req.body
     const sessionKey = req.session.userKey
     const result = {
@@ -40,14 +41,14 @@ router.get("/", checkLogout, async (req, res, next) => {
         })
 
         result.data = queryData
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //댓글 수정
-router.put("/:idx", checkLogout, checkTrim("content"), async (req, res, next) => {
+router.put("/:idx", isLogout, checkTrim("content"), async (req, res, next) => {
     const { content } = req.body
     const commentKey = req.params.idx
     const sessionKey = req.session.userKey
@@ -64,7 +65,7 @@ router.put("/:idx", checkLogout, checkTrim("content"), async (req, res, next) =>
             "userKey": sessionKey,
             "content": content
         }
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
 
     } catch (error) {
         next(error)
@@ -72,7 +73,7 @@ router.put("/:idx", checkLogout, checkTrim("content"), async (req, res, next) =>
 })
 
 //댓글 삭제 
-router.delete("/:idx", checkLogout, async (req, res, next) => {
+router.delete("/:idx", isLogout, async (req, res, next) => {
     const commentKey = req.params.idx
     const sessionKey = req.session.userKey
     const result = {
@@ -81,7 +82,7 @@ router.delete("/:idx", checkLogout, async (req, res, next) => {
     try {
         const sql = "DELETE FROM comment WHERE comment_key= $1 AND account_key =$2"
         await queryModule(sql, [commentKey, sessionKey])
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }

@@ -2,8 +2,8 @@ const router = require("express").Router()
 const queryModule = require("../modules/queryModule")
 const checkCondition = require("../middleware/checkCondition")
 const checkSame = require("../middleware/checkSame")
-const checkLogin = require("../middleware/checkLogin")
-const checkLogout = require("../middleware/checkLogout")
+const isLogin = require("../middleware/isLogin")
+const isLogout = require("../middleware/isLogout")
 const selectPattern = require("../modules/selectPattern")
 const sendModule = require("../modules/sendMoudle")
 const idPattern = selectPattern.idPattern
@@ -14,7 +14,7 @@ const birthPattern = selectPattern.birthPattern
 const phonePattern = selectPattern.phonePattern
 
 //로그인
-router.post("/login", checkLogin, checkCondition("id", idPattern, true), checkCondition("pw", pwPattern), async (req, res, next) => {
+router.post("/login", isLogin, checkCondition("id", idPattern, true), checkCondition("pw", pwPattern), async (req, res, next) => {
     const { id, pw } = req.body
     const result = {
         "message": ""
@@ -45,7 +45,7 @@ router.post("/login", checkLogin, checkCondition("id", idPattern, true), checkCo
 })
 
 //회원가입
-router.post("/", checkLogin, checkCondition("id", idPattern), checkCondition("pw", pwPattern), checkCondition("phone", phonePattern), checkCondition("email", emailPattern), checkCondition("birth", birthPattern), checkCondition("name", namePattern), checkSame("pw", "pwSame"), async (req, res, next) => {
+router.post("/", isLogin, checkCondition("id", idPattern), checkCondition("pw", pwPattern), checkCondition("phone", phonePattern), checkCondition("email", emailPattern), checkCondition("birth", birthPattern), checkCondition("name", namePattern), checkSame("pw", "pwSame"), async (req, res, next) => {
     const { id, pw, phone, name, email, birth } = req.body
     const result = {
         "message": "",
@@ -79,27 +79,27 @@ router.post("/", checkLogin, checkCondition("id", idPattern), checkCondition("pw
             "name": name,
             "birth": birth
         }
-        res.status(200).send(result) // sendMoudle 호출 (바꾸자)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //로그아웃
-router.post("/logout", checkLogout, (req, res, next) => {
+router.post("/logout", isLogout, (req, res, next) => {
     const result = {
         "message": ""
     }
     try {
         req.session.destroy() // 세션 삭제
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //id 찾기
-router.get("/findid", checkLogin, checkCondition("email", emailPattern), checkCondition("name", namePattern, true), async (req, res, next) => {
+router.get("/findid", isLogin, checkCondition("email", emailPattern), checkCondition("name", namePattern, true), async (req, res, next) => {
     const { name, email } = req.body
     const result = {
         "message": "",
@@ -118,14 +118,14 @@ router.get("/findid", checkLogin, checkCondition("email", emailPattern), checkCo
         }
 
         result.data = queryData[0]
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //pw 찾기
-router.get("/findpw", checkLogin, checkCondition("email", emailPattern), checkCondition("id", idPattern, true), async (req, res, next) => {
+router.get("/findpw", isLogin, checkCondition("email", emailPattern), checkCondition("id", idPattern, true), async (req, res, next) => {
     const { id, email } = req.body
     const result = {
         "message": "",
@@ -144,14 +144,14 @@ router.get("/findpw", checkLogin, checkCondition("email", emailPattern), checkCo
         }
 
         result.data = queryData[0]
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //내 정보 보기 
-router.get("/", checkLogout, (req, res, next) => {
+router.get("/", isLogout, (req, res, next) => {
     const id = req.session.userId
     const userKey = req.session.userKey
     const phone = req.session.phone
@@ -171,14 +171,14 @@ router.get("/", checkLogout, (req, res, next) => {
             "phone": phone,
             "birth": birth
         }
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //내 정보 수정하기
-router.put("/", checkLogout, checkCondition("name", namePattern), checkCondition("phone", phonePattern), checkCondition("pw", pwPattern), checkCondition("birth", birthPattern), async (req, res, next) => {
+router.put("/", isLogout, checkCondition("name", namePattern), checkCondition("phone", phonePattern), checkCondition("pw", pwPattern), checkCondition("birth", birthPattern), async (req, res, next) => {
     const { name, phone, pw, birth } = req.body
     const result = {
         "message": "",
@@ -198,14 +198,14 @@ router.put("/", checkLogout, checkCondition("name", namePattern), checkCondition
         req.session.phone = phone
         req.session.birth = birth
         req.session.name = name
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //회원 탈퇴하기
-router.delete("/", checkLogout, async (req, res, next) => {
+router.delete("/", isLogout, async (req, res, next) => {
     const result = {
         "message": ""
     }
@@ -215,7 +215,7 @@ router.delete("/", checkLogout, async (req, res, next) => {
         await queryModule(sql, [userKey])
 
         req.session.destroy() //로그아웃
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }

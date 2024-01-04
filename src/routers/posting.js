@@ -1,10 +1,11 @@
 const router = require("express").Router()
 const queryModule = require("../modules/queryModule")
-const checkLogout = require("../middleware/checkLogout")
+const isLogout = require("../middleware/isLogout")
 const checkTrim = require("../middleware/checkTrim")
+const sendModule = require("../modules/sendMoudle")
 
 //게시물 쓰기
-router.post("/", checkLogout, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
+router.post("/", isLogout, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
     const { content, title } = req.body
     const userKey = req.session.userKey
     console.log(userKey)
@@ -21,7 +22,7 @@ router.post("/", checkLogout, checkTrim("content"), checkTrim("title"), async (r
             "content": content,
             "title": title,
         }
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
@@ -40,14 +41,14 @@ router.get("/", async (req, res, next) => {
         ORDER BY posting.create_at DESC`
         const queryData = await queryModule(sql)
         result.data = queryData
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //각 게시물 읽기
-router.get("/:idx", checkLogout, async (req, res, next) => { // 여기도 내 거인지 아닌지 줘야 함
+router.get("/:idx", isLogout, async (req, res, next) => { // 여기도 내 거인지 아닌지 줘야 함
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
     const result = {
@@ -76,14 +77,14 @@ router.get("/:idx", checkLogout, async (req, res, next) => { // 여기도 내 �
         }
 
         result.data = queryData[0]
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //게시물 수정
-router.put("/:idx", checkLogout, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
+router.put("/:idx", isLogout, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
     const { content, title } = req.body
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
@@ -100,14 +101,14 @@ router.put("/:idx", checkLogout, checkTrim("content"), checkTrim("title"), async
             "content": content,
             "title": title
         }
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }
 })
 
 //게시물 삭제
-router.delete("/:idx", checkLogout, async (req, res, next) => {
+router.delete("/:idx", isLogout, async (req, res, next) => {
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
     const result = {
@@ -117,7 +118,7 @@ router.delete("/:idx", checkLogout, async (req, res, next) => {
         const sql = "DELETE FROM posting WHERE posting_key= $1 AND account_key =$2"
         await queryModule(sql, [postingKey, sessionKey])
 
-        res.status(200).send(result)
+        sendModule(req, res, 200, result)
     } catch (error) {
         next(error)
     }

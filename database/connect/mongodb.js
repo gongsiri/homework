@@ -1,4 +1,4 @@
-const MongoClient = require("mongodb").MongoClient
+const MongoClient = require("mongodb").MongoClient // 몽고디비 연결
 
 async function connectMongoDB() {
     const client = new MongoClient("mongodb://localhost:27017")
