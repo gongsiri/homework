@@ -1,9 +1,7 @@
-const sessionConfig = () => {
-    return {
-        secret: 'secretKey',
-        resave: false,
-        saveUninitialized: true
-    }
+const sessionConfig = {
+    secret: 'secretKey',
+    resave: false,
+    saveUninitialized: true
 }
 
 module.exports = sessionConfig

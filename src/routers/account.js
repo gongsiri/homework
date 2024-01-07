@@ -5,7 +5,7 @@ const checkSame = require("../middleware/checkSame")
 const isLogin = require("../middleware/isLogin")
 const isLogout = require("../middleware/isLogout")
 const selectPattern = require("../modules/selectPattern")
-const sendModule = require("../modules/sendMoudle")
+const logger = require("../config/loggerConfig")
 const idPattern = selectPattern.idPattern
 const pwPattern = selectPattern.pwPattern
 const namePattern = selectPattern.namePattern
@@ -38,7 +38,8 @@ router.post("/login", isLogin, checkCondition("id", idPattern, true), checkCondi
         req.session.name = queryData[0].name
         req.session.isAdmin = queryData[0].is_admin
         req.session.save()
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result) // 클라이언트에게 결과 데이터 전송
     } catch (error) {
         next(error)
     }
@@ -79,7 +80,8 @@ router.post("/", isLogin, checkCondition("id", idPattern), checkCondition("pw", 
             "name": name,
             "birth": birth
         }
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result) // 클라이언트에게 결과 데이터 전송
     } catch (error) {
         next(error)
     }
@@ -91,8 +93,10 @@ router.post("/logout", isLogout, (req, res, next) => {
         "message": ""
     }
     try {
-        req.session.destroy() // 세션 삭제
-        sendModule(req, res, 200, result)
+        req.session.destroy(() => {
+            logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+            res.status(200).send(result) // 클라이언트에게 결과 데이터 전송
+        })
     } catch (error) {
         next(error)
     }
@@ -118,7 +122,8 @@ router.get("/findid", isLogin, checkCondition("email", emailPattern), checkCondi
         }
 
         result.data = queryData[0]
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result) // 클라이언트에게 결과 데이터 전송  
     } catch (error) {
         next(error)
     }
@@ -144,7 +149,8 @@ router.get("/findpw", isLogin, checkCondition("email", emailPattern), checkCondi
         }
 
         result.data = queryData[0]
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result) // 클라이언트에게 결과 데이터 전송
     } catch (error) {
         next(error)
     }
@@ -171,7 +177,8 @@ router.get("/", isLogout, (req, res, next) => {
             "phone": phone,
             "birth": birth
         }
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result) // 클라이언트에게 결과 데이터 전송
     } catch (error) {
         next(error)
     }
@@ -198,7 +205,8 @@ router.put("/", isLogout, checkCondition("name", namePattern), checkCondition("p
         req.session.phone = phone
         req.session.birth = birth
         req.session.name = name
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result) // 클라이언트에게 결과 데이터 전송
     } catch (error) {
         next(error)
     }
@@ -215,7 +223,8 @@ router.delete("/", isLogout, async (req, res, next) => {
         await queryModule(sql, [userKey])
 
         req.session.destroy() //로그아웃
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result) // 클라이언트에게 결과 데이터 전송
     } catch (error) {
         next(error)
     }

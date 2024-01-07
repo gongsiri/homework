@@ -2,7 +2,7 @@ const router = require("express").Router()
 const queryModule = require("../modules/queryModule")
 const isLogout = require("../middleware/isLogout")
 const checkTrim = require("../middleware/checkTrim")
-const sendModule = require("../modules/sendMoudle")
+const logger = require("../config/loggerConfig")
 
 //게시물 쓰기
 router.post("/", isLogout, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
@@ -22,7 +22,8 @@ router.post("/", isLogout, checkTrim("content"), checkTrim("title"), async (req,
             "content": content,
             "title": title,
         }
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
@@ -41,7 +42,8 @@ router.get("/", async (req, res, next) => {
         ORDER BY posting.create_at DESC`
         const queryData = await queryModule(sql)
         result.data = queryData
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
@@ -77,7 +79,8 @@ router.get("/:idx", isLogout, async (req, res, next) => { // 여기도 내 거�
         }
 
         result.data = queryData[0]
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
@@ -101,7 +104,8 @@ router.put("/:idx", isLogout, checkTrim("content"), checkTrim("title"), async (r
             "content": content,
             "title": title
         }
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
@@ -118,7 +122,8 @@ router.delete("/:idx", isLogout, async (req, res, next) => {
         const sql = "DELETE FROM posting WHERE posting_key= $1 AND account_key =$2"
         await queryModule(sql, [postingKey, sessionKey])
 
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }

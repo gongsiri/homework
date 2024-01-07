@@ -7,7 +7,7 @@ router.get('/all', isAdmin, async (req, res, next) => { // 관리자 권한만
     const { userId, order, api, dateStart, dateEnd } = req.query
     const result = {} // 결과값
     const query = {} // 조건
-    const pattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
+    const date = {}
 
     if (userId) {
         query['userId'] = userId
@@ -15,14 +15,19 @@ router.get('/all', isAdmin, async (req, res, next) => { // 관리자 권한만
     if (api) {
         query['apiName'] = api
     }
-    if (dateStart && pattern.test(dateStart)) {
-        if (dateEnd && pattern.test(dateEnd)) { // 시작과 끝이 모두 있는 경우
-            query['time'] = { '$gte': new Date(dateStart), '$lte': new Date(dateEnd) }
-        } else { // 시작만 있는 경우
-            query['time'] = { '$gte': new Date(dateStart) }
+    if (dateStart && dateEnd) {
+        const startDate = new Date(dateStart)
+        const endDate = new Date(dateEnd)
+
+        if (startDate.getTime() === endDate.getTime()) {
+            date['$gte'] = startDate
+            date['$lt'] = new Date(endDate.getTime() + 86400000) // 24시간을 더해서 다음 날의 00:00:00까지를 포함하도록 함
+        } else {
+            date['$gte'] = startDate
+            date['$lte'] = endDate
         }
-    } else if (dateEnd && pattern.test(dateEnd)) { // 끝만 있는 경우
-        query['time'] = { '$lte': new Date(dateEnd) }
+
+        query['time'] = date
     }
 
     let sortOrder

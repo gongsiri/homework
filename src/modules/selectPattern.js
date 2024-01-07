@@ -1,3 +1,4 @@
+// module 말고 config에 넣는 게 좋음 
 const idPattern = /^[a-zA-Z0-9]{4,20}$/
 const pwPattern = /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,30}$/
 const namePattern = /^[가-힣]{2,5}$/

@@ -5,11 +5,12 @@ const accountApi = require("./routers/account")
 const postingApi = require("./routers/posting")
 const commentApi = require("./routers/comment")
 const logApi = require("./routers/log")
+const logger = require("./config/loggerConfig")
 
 const app = express()
 const port = 8001
 
-app.use(session(sessionConfig()))
+app.use(session(sessionConfig))
 app.use(express.json())
 
 app.use("/account", accountApi)
@@ -18,9 +19,8 @@ app.use("/comment", commentApi)
 app.use("/log", logApi)
 
 app.use((err, req, res, next) => { // 에러 처리
-    res.status(err.status || 500).send({
-        message: err.message || "오류 발생"
-    })
+    logger(req, res, { stack: err.stack })
+    res.status(err.status || 500).send({ message: err.message || "오류 발생" })
 })
 
 app.listen(port, () => {

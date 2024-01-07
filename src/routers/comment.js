@@ -2,7 +2,7 @@ const router = require("express").Router()
 const queryModule = require("../modules/queryModule")
 const isLogout = require("../middleware/isLogout")
 const checkTrim = require("../middleware/checkTrim")
-const sendModule = require("../modules/sendMoudle")
+const logger = require("../config/loggerConfig")
 
 //댓글 쓰기
 router.post("/", isLogout, checkTrim("content"), async (req, res, next) => {
@@ -14,7 +14,8 @@ router.post("/", isLogout, checkTrim("content"), async (req, res, next) => {
         const sql = 'INSERT INTO comment (account_key,posting_key,content) VALUES ($1,$2,$3)'
         await queryModule(sql, [req.session.userKey, postingKey, content])
 
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
@@ -41,7 +42,8 @@ router.get("/", isLogout, async (req, res, next) => {
         })
 
         result.data = queryData
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
@@ -65,7 +67,8 @@ router.put("/:idx", isLogout, checkTrim("content"), async (req, res, next) => {
             "userKey": sessionKey,
             "content": content
         }
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result)
 
     } catch (error) {
         next(error)
@@ -82,7 +85,8 @@ router.delete("/:idx", isLogout, async (req, res, next) => {
     try {
         const sql = "DELETE FROM comment WHERE comment_key= $1 AND account_key =$2"
         await queryModule(sql, [commentKey, sessionKey])
-        sendModule(req, res, 200, result)
+        logger(req, res, result) // 요청과 응답에 대한 로그를 기록
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
