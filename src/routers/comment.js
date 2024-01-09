@@ -1,11 +1,11 @@
 const router = require("express").Router()
 const queryModule = require("../modules/queryModule")
-const isLogout = require("../middleware/isLogout")
+const isLogin = require("../middleware/isLogin")
 const checkTrim = require("../middleware/checkTrim")
 const logger = require("../config/loggerConfig")
 
 //댓글 쓰기
-router.post("/", isLogout, checkTrim("content"), async (req, res, next) => {
+router.post("/", isLogin, checkTrim("content"), async (req, res, next) => {
     const { content, postingKey } = req.body
     const result = {
         "message": ""
@@ -22,7 +22,7 @@ router.post("/", isLogout, checkTrim("content"), async (req, res, next) => {
 })
 
 //댓글 읽기
-router.get("/", isLogout, async (req, res, next) => {
+router.get("/", isLogin, async (req, res, next) => {
     const { postingKey } = req.body
     const sessionKey = req.session.userKey
     const result = {
@@ -50,7 +50,7 @@ router.get("/", isLogout, async (req, res, next) => {
 })
 
 //댓글 수정
-router.put("/:idx", isLogout, checkTrim("content"), async (req, res, next) => {
+router.put("/:idx", isLogin, checkTrim("content"), async (req, res, next) => {
     const { content } = req.body
     const commentKey = req.params.idx
     const sessionKey = req.session.userKey
@@ -76,7 +76,7 @@ router.put("/:idx", isLogout, checkTrim("content"), async (req, res, next) => {
 })
 
 //댓글 삭제 
-router.delete("/:idx", isLogout, async (req, res, next) => {
+router.delete("/:idx", isLogin, async (req, res, next) => {
     const commentKey = req.params.idx
     const sessionKey = req.session.userKey
     const result = {

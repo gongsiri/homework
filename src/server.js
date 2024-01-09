@@ -1,5 +1,6 @@
 const express = require("express")
 const session = require("express-session") // 세션const app = express()
+const cp = require("cookie-parser")
 const sessionConfig = require("./config/sessionConfig")
 const accountApi = require("./routers/account")
 const postingApi = require("./routers/posting")
@@ -10,8 +11,10 @@ const logger = require("./config/loggerConfig")
 const app = express()
 const port = 8001
 
+require("dotenv").config()
 app.use(session(sessionConfig))
 app.use(express.json())
+app.use(cp())
 
 app.use("/account", accountApi)
 app.use("/posting", postingApi)

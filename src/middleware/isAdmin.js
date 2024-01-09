@@ -1,10 +1,21 @@
+const jwt = require("jsonwebtoken")
+const extractToken = require("../modules/extractToken")
+
 const isAdmin = (req, res, next) => {
-    if (!req.session.isAdmin) {
-        const error = new Error("권한이 없습니다")
-        error.status = 401
-        return next(error)
+    const token = req.cookies.token
+    if (!token) {
+        throw new Error("no token")
     }
-    next()
+
+    try {
+        jwt.verify(token, process.env.SECRET_KEY)
+        if (!extractToken(token).isAdmin) {
+            throw new Error("권한이 없습니다.")
+        }
+        next()
+    } catch (error) {
+        next(error)
+    }
 }
 
 module.exports = isAdmin

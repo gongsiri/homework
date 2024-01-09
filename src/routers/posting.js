@@ -1,13 +1,14 @@
 const router = require("express").Router()
 const queryModule = require("../modules/queryModule")
-const isLogout = require("../middleware/isLogout")
+const isLogin = require("../middleware/isLogin")
 const checkTrim = require("../middleware/checkTrim")
 const logger = require("../config/loggerConfig")
+const extractToken = require("../modules/extractToken")
 
 //게시물 쓰기
-router.post("/", isLogout, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
+router.post("/", isLogin, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
     const { content, title } = req.body
-    const userKey = req.session.userKey
+    const userKey = extractToken(req.cookies.token).idx
     console.log(userKey)
     const result = {
         "message": "",
@@ -18,7 +19,7 @@ router.post("/", isLogout, checkTrim("content"), checkTrim("title"), async (req,
         await queryModule(sql, [userKey, title, content])
 
         result.data = {
-            "id": req.session.userId,
+            "id": extractToken(req.cookies.token).id,
             "content": content,
             "title": title,
         }
@@ -50,7 +51,7 @@ router.get("/", async (req, res, next) => {
 })
 
 //각 게시물 읽기
-router.get("/:idx", isLogout, async (req, res, next) => { // 여기도 내 거인지 아닌지 줘야 함
+router.get("/:idx", isLogin, async (req, res, next) => { // 여기도 내 거인지 아닌지 줘야 함
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
     const result = {
@@ -87,7 +88,7 @@ router.get("/:idx", isLogout, async (req, res, next) => { // 여기도 내 거�
 })
 
 //게시물 수정
-router.put("/:idx", isLogout, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
+router.put("/:idx", isLogin, checkTrim("content"), checkTrim("title"), async (req, res, next) => {
     const { content, title } = req.body
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
@@ -112,7 +113,7 @@ router.put("/:idx", isLogout, checkTrim("content"), checkTrim("title"), async (r
 })
 
 //게시물 삭제
-router.delete("/:idx", isLogout, async (req, res, next) => {
+router.delete("/:idx", isLogin, async (req, res, next) => {
     const postingKey = req.params.idx
     const sessionKey = req.session.userKey
     const result = {
